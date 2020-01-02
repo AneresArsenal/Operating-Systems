@@ -1,0 +1,8 @@
+#!/bin/bash
+touch inputFile
+while read file
+do
+    echo "$file" >> inputFile
+done < $1
+
+echo -n 'wc  :'; echo -n "$1" | wc -l
