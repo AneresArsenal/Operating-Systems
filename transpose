@@ -1,0 +1,32 @@
+#!/bin/bash
+inputFile="transposeFile"
+column="transposeColFile"
+tempFile="transposeTempFile"
+finalFile="transposeFinalFile"
+flag=0
+
+while read myLine
+do
+    echo -e "$myLine" > $inputFile
+    if test $flag -ne 1
+    then
+        flag=1
+        cut -f 1 $inputFile > $column
+        cut -f 2 $inputFile >> $column
+        cut -f 3 $inputFile >> $column
+        cut -f 4 $inputFile >> $column
+        cat $column > $tempFile
+    else
+        cut -f 1 $inputFile > $column
+        cut -f 2 $inputFile >> $column
+        cut -f 3 $inputFile >> $column
+        cut -f 4 $inputFile >> $column  
+        paste $tempFile $column > $finalFile
+        cat finalFile > $tempFile
+    fi
+done < $1
+
+cat $finalFile
+
+# reference materials:
+# https://stackoverflow.com/questions/10929453/read-a-file-line-by-line-assigning-the-value-to-a-variable

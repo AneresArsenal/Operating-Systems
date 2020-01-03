@@ -1,5 +1,0 @@
-#!/bin/bash
-echo "Variablie contains $2: ==>$1<=="
-echo -n 'grep:'; echo -n "$1" | grep -c '^'
-echo -n 'wc  :'; echo -n "$1" | wc -l
-echo

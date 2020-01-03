@@ -1,29 +1,8 @@
 #!/bin/bash
-
-# datafilepath="m1$$"
-# if [ "$#" = "1" ]
-# then
-#     cat > "$datafilepath"
-# elif [ "$#" = "2" ]
-# then
-#     datafilepath=$2
-# fi
-
-
-# while read num
-# do
-#     echo "In loop"
-#     echo "num: $num"
-#     sum=`expr $sum + $num`
-#     echo "sum: $sum"
-#     echo -e "End of loop\n"
-
-# done < "$1"
-
-dims() {
 sum=0
 rows=0
 columns=0
+
 
 while IFS= read -rN1 char; do
     if [[ "$char" == $'\n' ]]; 
@@ -37,8 +16,16 @@ done < "$1"
 columns=$(( $columns / $rows))
 ((columns++))
 echo -e "\"$rows $columns\""
-}
 
+# while read num
+# do
+#     echo "In loop"
+#     echo "num: $num"
+#     sum=`expr $sum + $num`
+#     echo "sum: $sum"
+#     echo -e "End of loop\n"
+
+# done < "$1"
 
 # while IFS= read -r line; do
 #     echo "Text read from file: $line"

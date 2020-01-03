@@ -1,0 +1,71 @@
+#!/bin/bash
+inputFile="meanFile"
+column="meanCol"
+flag=0
+sum=0
+rows=0
+mean=0
+meanArr="meanArray"
+
+
+while IFS= read -rN1 char; do
+    if [[ "$char" == $'\n' ]]; 
+        then ((++rows))
+    fi
+done < $1
+
+((++rows))
+
+while read myLine
+do
+    echo -e "$myLine \n"
+    echo -e "$myLine" > $inputFile
+    cut -f 1 $inputFile > $column
+    cut -f 2 $inputFile >> $column
+    cut -f 3 $inputFile >> $column
+    cut -f 4 $inputFile >> $column
+    while read num
+    do
+        sum=`expr $sum + $num`
+    done < $column
+    echo "sum: $sum"
+    sum=$(( $sum + $rows - 1 ))
+    mean=$(( $sum / $rows ))
+    echo "mean: $mean"
+    cat $mean >> $meanArr
+    mean=0
+    sum=0
+done < $1
+
+cat $meanArr
+
+# while IFS= read -rN1 char; do
+#     if [[ "$char" == $'\n' ]]; 
+#         then ((++rows))
+#     fi
+#     if [[ "$char" == $'\t' ]]; 
+#         then ((++columns))
+#     fi
+# done < "$1"
+
+# columns=$(( $columns / $rows))
+# ((columns++))
+# echo -e "\"$rows $columns\""
+
+# while read num
+# do
+#     echo "In loop"
+#     echo "num: $num"
+#     sum=`expr $sum + $num`
+#     echo "sum: $sum"
+#     echo -e "End of loop\n"
+
+# done < "$1"
+
+# while IFS= read -r line; do
+#     echo "Text read from file: $line"
+# done < "$1"
+
+
+# reference materials:
+# https://stackoverflow.com/questions/10929453/read-a-file-line-by-line-assigning-the-value-to-a-variable
