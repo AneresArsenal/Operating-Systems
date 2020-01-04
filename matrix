@@ -1,14 +1,5 @@
 #!/bin/bash
 
-# datafilepath="m1$$"
-# if [ "$#" = "1" ]
-# then
-#     cat > "$datafilepath"
-# elif [ "$#" = "2" ]
-# then
-#     datafilepath=$2
-# fi
-
 
 # while read num
 # do
@@ -20,30 +11,277 @@
 
 # done < "$1"
 
-dims() {
 sum=0
 rows=0
 columns=0
 
-while IFS= read -rN1 char; do
-    if [[ "$char" == $'\n' ]]; 
-        then ((++rows))
+function dims() {
+
+if [ "$#" -eq 1 ]
+then
+    if [ -e $1 ]
+    then
+        while IFS= read -rN1 char
+        do
+            if [[ "$char" == $'\n' ]]; 
+                then ((++rows))
+            fi
+            if [[ "$char" == $'\t' ]]; 
+                then ((++columns))
+            fi
+        done < "$1"
+    else
+        echo "File named by argument 1 is not readable" 1>&2
+        exit 1
     fi
-    if [[ "$char" == $'\t' ]]; 
-        then ((++columns))
-    fi
-done < "$1"
+
+elif [ "$#" -eq 0 ]
+then
+    while IFS= read -rN1 char
+    do
+        if [[ "$char" == $'\n' ]]; 
+            then ((++rows))
+        fi
+        if [[ "$char" == $'\t' ]]; 
+            then ((++columns))
+        fi
+    done < /dev/stdin
+else
+    echo "Argument count is greater than 1" 1>&2
+    exit 1
+
+fi
 
 columns=$(( $columns / $rows))
 ((columns++))
-echo -e "\"$rows $columns\""
+echo -e "$rows $columns"
 }
 
+function transpose() {
 
-# while IFS= read -r line; do
-#     echo "Text read from file: $line"
-# done < "$1"
+inputFile="transposeFile"
+column="transposeColFile"
+tempFile="transposeTempFile"
+finalFile="transposeFinalFile"
+flag=0
 
+if [ "$#" -eq 1 ]
+then
+    if [ -e $1 ]
+    then
+        while IFS= read -rN1 char
+        do
+        if [[ "$char" == $'\n' ]]; 
+            then ((++rows))
+        fi
+        if [[ "$char" == $'\t' ]]; 
+            then ((++columns))
+        fi
+        done < $1
+
+        columns=$(( $columns / $rows))
+        ((columns++))
+        ((columns++))
+
+        # echo -e "Pre-transpose: number of rows $rows \n"
+        # echo -e "Pre-transpose: number of columns $columns \n"
+        
+        ((++rows))
+        ((++rows))
+        flag=0
+        # j=0
+        
+        while read myLine
+        do
+        echo -e "$myLine" > $inputFile
+        if [ $flag -ne 1 ]
+        then
+            flag=1
+            # ((++j))
+            cut -f 1 $inputFile > $column
+            i=2
+            while [ $i -ne $columns ]
+            do
+                cut -f $i $inputFile >> $column
+                ((++i))
+            done
+            cat $column > $tempFile
+        else
+            # ((++j))
+            cut -f 1 $inputFile > $column
+            i=2
+            while [ $i -ne $columns ]
+            do
+                cut -f $i $inputFile >> $column
+                ((++i))
+            done
+            
+            # echo -e "column file:\n"
+            # cat $column
+            # echo -e "temp file:\n"
+            # cat $tempFile
+
+            paste $tempFile $column > $finalFile
+            cat $finalFile > $tempFile
+        fi
+        done < $1     
+
+        # echo -e "post-transpose: number of rows $i"
+        # echo -e "post-transpose: number of columns $j"   
+        # done < /dev/stdin
+        cat $finalFile
+    else
+        echo "File named by argument 1 is not readable" 1>&2
+        exit 1
+    fi
+
+elif [ "$#" -eq 0 ]
+then
+    while IFS= read -rN1 char
+    do
+            if [[ "$char" == $'\n' ]]; 
+                then ((++rows))
+            fi
+            if [[ "$char" == $'\t' ]]; 
+                then ((++columns))
+            fi
+    done < $m1
+
+    columns=$(( $columns / $rows))
+    ((columns++))
+
+    # echo -e "Pre-transpose: number of rows $rows \n"
+    # echo -e "Pre-transpose: number of columns $columns \n"
+    
+    ((++rows))
+    ((++rows))
+    flag=0
+    j=0
+        
+    while read myLine
+    do
+        echo -e "$myLine" > $inputFile
+        if [ $flag -ne 1 ]
+        then
+            flag=1
+            ((++j))
+            cut -f 1 $inputFile > $column
+            i=2
+            while [ $i -ne $columns ]
+            do
+                cut -f $i $inputFile >> $column
+                ((++i))
+            done
+            cat $column > $tempFile
+        else
+            ((++j))
+            cut -f 1 $inputFile > $column
+            i=2
+            while [ $i -ne $columns ]
+            do
+                cut -f $i $inputFile >> $column
+                ((++i))
+            done
+            
+            # echo -e "column file:\n"
+            # cat $column
+            # echo -e "temp file:\n"
+            # cat $tempFile
+
+            paste $tempFile $column > $finalFile
+            cat $finalFile > $tempFile
+        fi
+    done < /dev/stdin
+    # done < $m1     
+    # echo -e "post-transpose: number of rows $i"
+    # echo -e "post-transpose: number of columns $j"   
+
+    cat $finalFile
+
+else
+    echo "Argument count is greater than 1" 1>&2
+    exit 1
+fi
+
+}
+
+function mean(){
+
+inputFile="meanFile"
+column="meanCol"
+flag=0
+sum=0
+rows=0
+mean=0
+meanArr="meanArray"
+
+if [ "$#" -eq 1 ]
+then
+    if [ -e $1 ]
+    then
+
+    while IFS= read -rN1 char
+        do
+        if [[ "$char" == $'\n' ]]; 
+            then ((++rows))
+        fi
+        if [[ "$char" == $'\t' ]]; 
+            then ((++columns))
+        fi
+        done < $1
+
+    columns=$(( $columns / $rows))
+
+    echo -e "Pre-transpose: number of rows $rows \n"
+    echo -e "Pre-transpose: number of columns $columns \n"
+
+    ((++rows))
+    ((++rows))
+
+    while read myLine
+    do
+        echo -e "$myLine \n"
+        echo -e "$myLine" > $inputFile
+        cut -f 1 $inputFile > $column
+        i=2
+        while [ $i -ne $rows ]
+        do
+            cut -f $i $inputFile >> $column
+            ((++i))
+        done
+        while read num
+        do
+            echo -e "$num \n"
+            sum=`expr $sum + $num`
+        done < $column
+        echo "sum: $sum"
+        # sum=$(( $sum + $rows - 1 ))
+        # mean=$(( $sum / $rows ))
+        # echo "mean: $mean"
+        # cat $mean >> $meanArr
+        mean=0
+        sum=0
+    done < $1
+
+    cat $meanArr
+
+    else
+        echo "File named by argument 1 is not readable" 1>&2
+        exit 1
+    fi
+
+
+else
+echo "Argument count is greater than 1" 1>&2
+exit 1
+fi
+
+}
+
+$@
 
 # reference materials:
 # https://stackoverflow.com/questions/10929453/read-a-file-line-by-line-assigning-the-value-to-a-variable
+# https://stackoverflow.com/questions/18568706/check-number-of-arguments-passed-to-a-bash-script
+# https://stackoverflow.com/questions/6980090/how-to-read-from-a-file-or-stdin-in-bash
+# https://stackoverflow.com/questions/638975/how-do-i-tell-if-a-regular-file-does-not-exist-in-bash
