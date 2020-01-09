@@ -221,7 +221,7 @@ transposecolumn="transposeColFile"
 transposetempFile="transposeTempFile"
 transposefinalFile="transposeFinalFile"
 m1="meanM1"
-
+m2="meanM2"
 
 echo "-28	91	29	-5	12	83
 -94	-16	41	-28	6	86
@@ -264,11 +264,12 @@ echo "-28	91	29	-5	12	83
 80	84	63	-10	80	-99
 96	-5	-81	11	37	-46" > $m1
 
+echo "-10	16	13	4	2	-4" > $m2
 
-# if [ "$#" -eq 1 ]
-# then
-    # if [ -e $1 ]
-    # then
+if [ "$#" -eq 1 ]
+then
+    if [ -e $1 ]
+    then
 
         while IFS= read -rN1 char
         do
@@ -282,36 +283,33 @@ echo "-28	91	29	-5	12	83
 
         cols=$(( $cols / $rows))
         ((cols++))
-        ((cols++))
 
-        echo -e "Pre-transpose: number of rows $rows \n"
-        echo -e "Pre-transpose: number of cols $cols \n"
-        
-        ((++rows))
-        ((++rows))
+        # echo -e "Pre-transpose: number of rows $rows \n"
+        # echo -e "Pre-transpose: number of cols $cols \n"
+
         flag=0
-        # j=0
-        
+        j=0
+            
         while read myLine
         do
             echo -e "$myLine" > $transposeinputFile
             if [ $flag -ne 1 ]
             then
                 flag=1
-                # ((++j))
+                ((++j))
                 cut -f 1 $transposeinputFile > $transposecolumn
                 i=2
-                while [ $i -ne $cols ]
+                while [ $i -le $cols ]
                 do
                     cut -f $i $transposeinputFile >> $transposecolumn
                     ((++i))
                 done
                 cat $transposecolumn > $transposetempFile
             else
-                # ((++j))
+                ((++j))
                 cut -f 1 $transposeinputFile > $transposecolumn
                 i=2
-                while [ $i -ne $cols ]
+                while [ $i -le $cols ]
                 do
                     cut -f $i $transposeinputFile >> $transposecolumn
                     ((++i))
@@ -326,57 +324,48 @@ echo "-28	91	29	-5	12	83
                 cat $transposefinalFile > $transposetempFile
             fi
         done < $m1 
-    
 
-        # while read myLine
-        # do
-        #     echo -e "$myLine \n"
-            # echo -e "$myLine" > $inputFile
-            # cut -f 1 $inputFile > $line
-            # i=2
-            # while [ $i -le $rows ]
-            # do    
-            #     cut $i $inputFile >> $line
-            #     ((++i))
-            # done
-            # while read num
-            # do
-            #     echo -e "$num \n"
-            #     sum=`expr $sum + $num`
-            # done < $line
-            # echo "sum: $sum"
-            # sum=$(( $sum + $rows ))
-            # mean=$(( $sum / $rows ))
-            # echo "mean: $mean"
-            # if [ $flag -ne 1 ]
-            # then
-            #     flag=1
-            #     echo "$mean" > $meanArr
-            # else
-            #     echo "$mean" >> $meanArr
-            # fi
-            # mean=0
-            # sum=0
-        # done < $transposefinalFile
-
-        ((cols--))
-        ((cols--))
+        # echo -e "Post-transpose: number of rows $i \n"
+        # echo -e "Post-transpose: number of cols $j \n"
+        # cat $m1
+        # cat $transposefinalFile 
+        ((--i))
 
         flag=0
-
-        # cat $transposefinalFile 
-
+            
         while IFS=$'\t' read -r -a currentLine
         do
-            echo -e "$currentLine"
+            # echo -e "$currentLine"
             for i in "${currentLine[@]}"
             do 
+                # echo "num: $i"
                 sum=`expr $sum + $i`
+                # echo "sum: $sum"
             done
-            # echo "sum: $sum"
-            # echo "cols: $cols"
-            sum=$(( $sum + $cols -1 ))
-            mean=$(( $sum / $cols ))
+            echo "sum: $sum"    
+            mean=$(( $sum / $rows ))
+            round=$(( $sum % $rows ))
+            round=$(( $round + $round ))
+
+            # positive mean
+            if [ $round -gt 0 ]
+            then
+                if [ $round -ge $rows ]
+                then
+                    round=1
+                else
+                    round=0
+                fi
+            #negative mean
+            else
+                if [ $round -le $rows ]
+                then
+                    round=-1
+                else
+                    round=0
+                fi
+            fi
+            mean=$(( $mean + $round ))
             # echo "mean: $mean"
             if [ $flag -ne 1 ]
             then
@@ -388,7 +377,7 @@ echo "-28	91	29	-5	12	83
             mean=0
             sum=0
         done < $transposefinalFile
-
+        
 
         cat $meanArr | tr '\n' '\t' > "$tempRow"
         echo >> $tempRow
@@ -408,18 +397,16 @@ echo "-28	91	29	-5	12	83
             rm -f $transposefinalFile
         fi
 
-    
-
-    # else
-    #     echo "File named by argument 1 is not readable" 1>&2
-    #     exit 1
-    # fi
+    else
+        echo "File named by argument 1 is not readable" 1>&2
+        exit 1
+    fi
 
 
-# else
-# echo "Argument count is greater than 1" 1>&2
-# exit 1
-# fi
+else
+echo "Argument count is greater than 1" 1>&2
+exit 1
+fi
 
 }
 
