@@ -1,31 +1,43 @@
 #!/bin/bash
 
 
-# while read num
-# do
-#     echo "In loop"
-#     echo "num: $num"
-#     sum=`expr $sum + $num`
-#     echo "sum: $sum"
-#     echo -e "End of loop\n"
 
-# done < "$1"
-
+# global variables used to identify the dimensions of the matrix passed in
 sum=0
 rows=0
 cols=0
 
+
+############################################ dims ############################################
+# dims function print the dimensions of the matrix as the number of rows, 
+# followed by a space, then the number of columns.
+#
+# call function via matrix dims [MATRIX]
+#
+# Prints error message to stderr, nothing to stdout and return value != 0 if:
+# 1. Argument count is greater than 1 (e.g. `matrix dims m1 m2`).
+# 2. Argument count is 1 but the file named by argument 1 is not readable 
+#    (e.g. `matrix dims no_such_file`).
+# 
+#If no error is detected, prints "ROWS COLS" (Space separated!) to stdout, 
+# nothing to stderr, and returns 0.
+##############################################################################################
+
 function dims() {
 
+# check if one argument is passed in
 if [ "$#" -eq 1 ]
 then
+    # check if file is readable i.e exists
     if [ -e $1 ]
     then
         while IFS= read -rN1 char
         do
+            #use newline to count rows
             if [[ "$char" == $'\n' ]]; 
                 then ((++rows))
             fi
+            # use tabs to count columns
             if [[ "$char" == $'\t' ]]; 
                 then ((++cols))
             fi
@@ -35,57 +47,97 @@ then
         exit 1
     fi
 
+# if no argument is passed, read from stdin
 elif [ "$#" -eq 0 ]
 then
     while IFS= read -rN1 char
     do
+        #use newline to count rows
         if [[ "$char" == $'\n' ]]; 
             then ((++rows))
         fi
+
+        # use tabs to count columns
         if [[ "$char" == $'\t' ]]; 
             then ((++cols))
         fi
     done < /dev/stdin
+
+#print error if argument count exceeds 1 as instructed in requirements
 else
     echo "Argument count is greater than 1" 1>&2
     exit 1
 
 fi
 
+# columns calculated is the aggregate total of colums
+# divide by number of rows to get the actual number of columns - 1
+
 cols=$(( $cols / $rows))
+
+# add 1 as the number of tabs is one less of the number of columns
 ((cols++))
+
+#print results
 echo -e "$rows $cols"
 }
 
+####################################### transpose #######################################
+# transpose should reflect the elements of the matrix along the main diagonal. 
+# Thus, an MxN matrix will become an NxM matrix and the values along the main diagonal 
+# will remain unchanged.
+#
+# call function via matrix transpose [MATRIX]
+#
+# Prints error message to stderr, nothing to stdout and return value != 0 if:
+# 1. Argument count is greater than 1 (e.g. `matrix transpose m1 m2`).
+# 2. Argument count is 1 but the file named by argument 1 is not readable 
+#    (e.g. `matrix transpose no_such_file`).
+#
+# If no error is detected, prints the transpose of the input, in a valid matrix format 
+# to stdout, nothing to stderr, and returns 0.
+#########################################################################################
+
 function transpose() {
 
+#create files used in transpose function
 inputFile="transposeFile"
 column="transposeColFile"
 tempFile="transposeTempFile"
 finalFile="transposeFinalFile"
 flag=0
 
+# check if one argument is passed in
 if [ "$#" -eq 1 ]
 then
+    # check if file is readable i.e exists
     if [ -e $1 ]
     then
         while IFS= read -rN1 char
         do
+        # use newline to count rows
         if [[ "$char" == $'\n' ]]; 
             then ((++rows))
         fi
+        # use tabs to count columns
         if [[ "$char" == $'\t' ]]; 
             then ((++cols))
         fi
         done < $1
 
+        # columns calculated is the aggregate total of colums
+        # divide by number of rows to get the actual number of columns - 1
         cols=$(( $cols / $rows))
+        # add 1 as the number of tabs is one less of the number of columns
         ((cols++))
+
+        # add 1 for the while loop dim column check
         ((cols++))
 
         # echo -e "Pre-transpose: number of rows $rows \n"
         # echo -e "Pre-transpose: number of cols $cols \n"
         
+        # add for the while loop dim rows check
         ((++rows))
         ((++rows))
         flag=0
@@ -93,13 +145,18 @@ then
         
         while read myLine
         do
+        # read line by line from file
         echo -e "$myLine" > $inputFile
+
+        #read first line to override old file
         if [ $flag -ne 1 ]
         then
+            # set flag to 1 after first line read
             flag=1
-            # ((++j))
+            # cut first column of first row
             cut -f 1 $inputFile > $column
             i=2
+            # cut rest of the columns using iterator by checking it is within the column length
             while [ $i -ne $cols ]
             do
                 cut -f $i $inputFile >> $column
@@ -107,51 +164,45 @@ then
             done
             cat $column > $tempFile
         else
-            # ((++j))
+            # cut rest of the rows
+            # cut first column of the row
             cut -f 1 $inputFile > $column
             i=2
+             # cut rest of the columns using iterator by checking it is within the column length
             while [ $i -ne $cols ]
             do
                 cut -f $i $inputFile >> $column
                 ((++i))
             done
             
-            # echo -e "column file:\n"
-            # cat $column
-            # echo -e "temp file:\n"
-            # cat $tempFile
-
+            # combine both files horizontally
             paste $tempFile $column > $finalFile
             cat $finalFile > $tempFile
         fi
         done < $1     
 
-        # echo -e "post-transpose: number of rows $i"
-        # echo -e "post-transpose: number of cols $j"   
-        # done < /dev/stdin
+        # display results
         cat $finalFile
     else
         echo "File named by argument 1 is not readable" 1>&2
         exit 1
     fi
 
+# if no argument is passed, read from stdin, functions as the same as the above
 elif [ "$#" -eq 0 ]
 then
     while IFS= read -rN1 char
     do
-            if [[ "$char" == $'\n' ]]; 
-                then ((++rows))
-            fi
-            if [[ "$char" == $'\t' ]]; 
-                then ((++cols))
-            fi
+        if [[ "$char" == $'\n' ]]; 
+            then ((++rows))
+        fi
+        if [[ "$char" == $'\t' ]]; 
+            then ((++cols))
+        fi
     done < $m1
 
     cols=$(( $cols / $rows))
     ((cols++))
-
-    # echo -e "Pre-transpose: number of rows $rows \n"
-    # echo -e "Pre-transpose: number of cols $cols \n"
     
     ((++rows))
     ((++rows))
@@ -182,19 +233,12 @@ then
                 cut -f $i $inputFile >> $column
                 ((++i))
             done
-            
-            # echo -e "column file:\n"
-            # cat $column
-            # echo -e "temp file:\n"
-            # cat $tempFile
 
             paste $tempFile $column > $finalFile
             cat $finalFile > $tempFile
         fi
     done < /dev/stdin
-    # done < $m1     
-    # echo -e "post-transpose: number of rows $i"
-    # echo -e "post-transpose: number of cols $j"   
+
 
     cat $finalFile
 
@@ -204,6 +248,22 @@ else
 fi
 
 }
+
+########################################## mean ##########################################
+# mean should take an MxN matrix and return an 1xN row vector, where the first element is 
+# the mean of column one, the second element is the mean of column two, and so on.
+#
+# call function via matrix mean [MATRIX]
+#
+# Prints error message to stderr, nothing to stdout and return value != 0 if:
+# 1. Argument count is greater than 1 (e.g. `matrix mean m1 m2`).
+# 2. Argument count is 1 but the file named by argument 1 is not readable 
+#    (e.g. `matrix transpose no_such_file`).
+#
+# If no error is detected, prints a row vector mean of the input matrix, in a valid matrix 
+# format to stdout, nothing to stderr, and returns 0. All values must round to the 
+# nearest integer, with ***.5 values rounded away from zero.
+###########################################################################################
 
 function mean(){
 
@@ -220,51 +280,7 @@ transposeinputFile="meantransposeFile"
 transposecolumn="transposeColFile"
 transposetempFile="transposeTempFile"
 transposefinalFile="transposeFinalFile"
-m1="meanM1"
-m2="meanM2"
 
-echo "-28	91	29	-5	12	83
--94	-16	41	-28	6	86
--44	83	-9	64	92	-70
-41	22	66	29	55	49
-6	52	4	17	-29	52
--8	-33	96	-73	-76	92
--32	94	45	4	43	-97
--57	36	86	90	35	75
-46	8	4	-83	-94	-52
-0	-6	-90	48	70	11
--33	-41	-76	68	30	-19
-70	96	-85	-1	-9	-62
-58	63	-4	22	-69	-25
--75	-65	-78	76	39	10
--99	-69	63	53	35	67
-73	51	55	-26	-14	9
--90	-19	-19	-63	-96	23
--62	89	93	98	48	-21
--56	-86	24	45	-79	-65
--79	-60	87	-74	44	20
--38	50	-50	-38	-36	30
--69	-66	-23	42	55	-5
--62	98	47	-86	23	-85
--2	-55	-79	-41	-12	-31
--84	-10	46	16	-56	-26
-70	-16	-17	99	24	-41
-80	47	-59	-55	80	96
--54	43	24	-82	1	-46
-25	-1	92	16	44	-21
-62	58	79	-97	-21	-62
--46	-23	-68	59	-72	-6
--78	59	11	52	-96	-77
-5	77	64	-29	-98	69
--68	69	74	32	-71	91
-38	-75	25	-61	-29	73
-40	25	29	93	93	-27
--1	-16	-14	48	99	-36
-81	6	35	-90	4	-57
-80	84	63	-10	80	-99
-96	-5	-81	11	37	-46" > $m1
-
-echo "-10	16	13	4	2	-4" > $m2
 
 if [ "$#" -eq 1 ]
 then
@@ -279,7 +295,7 @@ then
             if [[ "$char" == $'\t' ]]; 
                 then ((++cols))
             fi
-        done < $m1
+        done < $1
 
         cols=$(( $cols / $rows))
         ((cols++))
@@ -323,7 +339,7 @@ then
                 paste $transposetempFile $transposecolumn > $transposefinalFile
                 cat $transposefinalFile > $transposetempFile
             fi
-        done < $m1 
+        done < $1 
 
         # echo -e "Post-transpose: number of rows $i \n"
         # echo -e "Post-transpose: number of cols $j \n"
@@ -342,7 +358,7 @@ then
                 sum=`expr $sum + $i`
                 # echo "sum: $sum"
             done
-            echo "sum: $sum"    
+            # echo "sum: $sum"    
             mean=$(( $sum / $rows ))
             round=$(( $sum % $rows ))
             round=$(( $round + $round ))
@@ -356,7 +372,11 @@ then
                 else
                     round=0
                 fi
+                mean=$(( $mean + $round ))
             #negative mean
+            elif [ $round -eq 0 ]
+            then
+                mean=$(( $mean + 0 ))
             else
                 if [ $round -le $rows ]
                 then
@@ -364,8 +384,9 @@ then
                 else
                     round=0
                 fi
+                mean=$(( $mean + $round ))
             fi
-            mean=$(( $mean + $round ))
+            
             # echo "mean: $mean"
             if [ $flag -ne 1 ]
             then
@@ -379,9 +400,10 @@ then
         done < $transposefinalFile
         
 
-        cat $meanArr | tr '\n' '\t' > "$tempRow"
-        echo >> $tempRow
-        cat $tempRow
+        cat $meanArr | tr '\n' '\t' > $tempRow
+        truncate -s-1 $tempRow
+        printf "\n" >> "$tempRow"
+        cat "$tempRow"
 
         if [ $? -eq 0 ]
         then
@@ -390,7 +412,6 @@ then
             rm -f $inputFile
             rm -f $line
             rm -f $meanArr
-            rm -f $tempRow
             rm -f $transposeinputFile
             rm -f $transposecolumn
             rm -f $transposetempFile
@@ -409,6 +430,163 @@ exit 1
 fi
 
 }
+
+
+########################################## add #################################################
+# add should take two MxN matrices and add them together element-wise to produce an MxN matrix. 
+# add should return an error if the matrices do not have the same dimensions.
+#
+# call function via matrix add [MATRIX_LEFT] [MATRIX_RIGHT]
+#
+# Prints error message to stderr, nothing to stdout and return value != 0 if:
+# 1. Argument count does not equal 2 (e.g. `matrix add m1 m2 m3` or `matrix add m1`).
+# 2. Argument count is 2 but the file named by either argument is not readable 
+#   (e.g. `matrix add m1 no_such_file`). The dimensions of the input matrices do not allow them
+#   to be added together following the rules of matrix addition.
+#
+# If no error is detected, prints a row vector mean of the input matrix, in a valid matrix 
+# format to stdout, nothing to stderr, and returns 0. All values must round to the 
+# nearest integer, with ***.5 values rounded away from zero.
+################################################################################################
+
+function add() {
+
+rowsLeft=0
+rowsRight=0
+columnLeft=0
+columnRight=0
+m1="addM1"
+m2="addM2"
+m3="addM3"
+
+
+echo "68	86	-22	95	-97	44	68	-98	70	-65	69	94	-5	-84	3	83	71	31	-10	0
+-82	74	-87	94	56	27	-45	-45	12	-75	-76	0	42	-76	75	14	21	-30	87	-8
+-58	62	78	70	57	-93	2	-82	-2	-55	46	68	98	-91	40	73	-87	-45	58	78
+45	45	42	93	47	-66	62	-70	84	92	82	-18	51	-55	-5	19	-16	58	-29	56
+-95	-24	-72	23	40	67	-8	58	41	-5	54	-11	-22	68	73	90	92	20	89	39
+74	-7	59	27	39	-97	-97	75	40	21	13	36	-83	-85	-84	-92	44	-7	83	-88
+-33	-59	-91	-33	-23	-55	-77	-50	14	39	91	-39	58	-29	-75	-25	28	-84	-91	35
+94	-78	97	24	94	-74	10	81	67	42	-67	-72	-66	-48	71	11	77	0	56	92
+56	-36	70	-8	50	53	92	-81	99	45	96	-37	38	60	-37	61	-62	99	23	79
+93	47	-87	-56	-60	-43	-7	75	82	-13	-81	-66	38	-23	30	-46	7	-30	-25	89
+-8	73	1	-25	-53	-82	-82	23	0	-5	26	-13	-13	-4	-57	-52	26	96	-40	47
+66	-83	84	-51	6	-5	62	-51	-54	-50	31	-6	88	55	-73	35	32	-91	-23	2
+73	37	89	90	-45	89	-56	-12	3	79	-26	-18	81	93	-92	3	-17	23	-64	-4
+-45	-57	59	-72	-84	44	38	70	47	-91	-10	-86	18	-40	-21	98	42	79	7	-80
+-33	-93	78	-16	91	-62	55	82	-93	1	72	-31	-52	-8	-55	-89	66	-99	10	-25
+64	-66	-56	19	19	80	-32	-16	73	10	25	-20	-57	30	29	81	30	-90	33	-54
+68	-7	53	52	-55	-44	-94	-20	-76	29	88	33	-26	30	-45	90	-56	85	60	38
+-28	17	90	-42	-35	87	-2	-47	94	-35	78	-33	59	-22	8	-5	0	-36	33	-27
+-92	75	91	-97	19	76	33	20	-10	-80	-20	3	98	-35	75	-28	-48	-73	-68	72
+17	45	43	-90	-12	4	86	-49	88	-92	39	-18	5	-10	-69	-5	-56	3	-21	10" > "$m1"
+echo "24	52	55	-34	-9	74	-79	-78	5	-42	48	-53	-77	47	-53	97	-72	20	77	-28
+-66	-54	72	-46	-25	53	-95	-3	-75	-62	92	-43	-57	0	78	-63	-90	12	-60	-77
+65	43	-17	65	25	-77	57	27	71	98	83	53	28	-87	-56	-20	67	-3	-16	-61
+-99	19	30	34	-10	-73	1	-18	7	99	-76	71	-72	-78	20	56	66	20	10	34
+-54	-37	54	18	-11	56	-81	-97	64	-56	68	-36	25	-26	-56	91	-60	12	-9	17
+-41	-78	-54	-19	-38	-76	17	-90	91	-5	82	-31	-92	93	-57	43	-56	14	29	-45
+78	22	-94	12	-76	44	-63	-11	-11	-89	-81	53	56	6	27	30	-26	-79	-12	-50
+52	15	-44	63	8	40	91	10	-26	-35	-61	21	-55	82	-97	-90	-25	10	-60	2
+-33	-48	-46	-64	-41	-61	84	54	0	26	-56	75	-81	-53	-68	-2	-93	-46	29	85
+53	-93	-31	51	78	75	69	10	-20	-68	-67	-67	-54	23	76	32	-11	-86	-55	-14
+5	93	35	41	-26	41	77	88	43	44	-89	91	66	-11	90	-44	-61	-10	-66	-51
+82	83	-44	55	69	80	1	-29	8	-87	-93	-91	-53	44	3	-3	24	13	86	33
+92	5	-75	58	-4	-52	-2	-3	78	9	83	59	82	-4	-57	76	25	-49	-44	15
+75	64	44	-23	43	56	60	0	46	26	39	53	-85	53	14	81	77	-11	-32	33
+75	0	68	-5	-78	-13	90	-51	-15	-40	77	-95	-37	59	-20	30	38	-32	4	-76
+-63	-28	58	-62	-42	93	15	79	32	-42	4	-98	85	-85	-31	-38	28	-31	-17	17
+-65	-66	-8	26	-7	79	18	33	21	66	41	-22	20	66	-9	-64	-71	-67	-16	68
+19	12	55	6	-90	-60	1	26	64	-29	62	96	89	11	-77	-26	76	-62	-48	-36
+-76	-21	-93	85	-5	-99	41	-74	47	1	-44	47	16	83	30	-38	33	-53	80	-11
+94	20	-76	-25	17	-5	3	-78	92	-33	-13	14	85	-52	-55	5	75	-89	9	-16" >"$m2"
+echo "92	138	33	61	-106	118	-11	-176	75	-107	117	41	-82	-37	-50	180	-1	51	67	-28
+-148	20	-15	48	31	80	-140	-48	-63	-137	16	-43	-15	-76	153	-49	-69	-18	27	-85
+7	105	61	135	82	-170	59	-55	69	43	129	121	126	-178	-16	53	-20	-48	42	17
+-54	64	72	127	37	-139	63	-88	91	191	6	53	-21	-133	15	75	50	78	-19	90
+-149	-61	-18	41	29	123	-89	-39	105	-61	122	-47	3	42	17	181	32	32	80	56
+33	-85	5	8	1	-173	-80	-15	131	16	95	5	-175	8	-141	-49	-12	7	112	-133
+45	-37	-185	-21	-99	-11	-140	-61	3	-50	10	14	114	-23	-48	5	2	-163	-103	-15
+146	-63	53	87	102	-34	101	91	41	7	-128	-51	-121	34	-26	-79	52	10	-4	94
+23	-84	24	-72	9	-8	176	-27	99	71	40	38	-43	7	-105	59	-155	53	52	164
+146	-46	-118	-5	18	32	62	85	62	-81	-148	-133	-16	0	106	-14	-4	-116	-80	75
+-3	166	36	16	-79	-41	-5	111	43	39	-63	78	53	-15	33	-96	-35	86	-106	-4
+148	0	40	4	75	75	63	-80	-46	-137	-62	-97	35	99	-70	32	56	-78	63	35
+165	42	14	148	-49	37	-58	-15	81	88	57	41	163	89	-149	79	8	-26	-108	11
+30	7	103	-95	-41	100	98	70	93	-65	29	-33	-67	13	-7	179	119	68	-25	-47
+42	-93	146	-21	13	-75	145	31	-108	-39	149	-126	-89	51	-75	-59	104	-131	14	-101
+1	-94	2	-43	-23	173	-17	63	105	-32	29	-118	28	-55	-2	43	58	-121	16	-37
+3	-73	45	78	-62	35	-76	13	-55	95	129	11	-6	96	-54	26	-127	18	44	106
+-9	29	145	-36	-125	27	-1	-21	158	-64	140	63	148	-11	-69	-31	76	-98	-15	-63
+-168	54	-2	-12	14	-23	74	-54	37	-79	-64	50	114	48	105	-66	-15	-126	12	61
+111	65	-33	-115	5	-1	89	-127	180	-125	26	-4	90	-62	-124	0	19	-86	-12	-6" >"$m3"
+
+
+# check if 2 arguments are passed in
+if [ "$#" -eq 0 ]
+then
+    # check if both files are readable i.e exists to avoid read error
+    if [[  -e $m1 &&  -e $m2 ]]
+    then
+        while IFS= read -rN1 char
+        do
+            #use newline to count rows
+            if [[ "$char" == $'\n' ]]; 
+                then ((++rowsLeft))
+            fi
+            # use tabs to count columns
+            if [[ "$char" == $'\t' ]]; 
+                then ((++colsLeft))
+            fi
+        done < $m1
+
+        while IFS= read -rN1 char
+        do
+            #use newline to count rows
+            if [[ "$char" == $'\n' ]]; 
+                then ((++rowsRight))
+            fi
+            # use tabs to count columns
+            if [[ "$char" == $'\t' ]]; 
+                then ((++colsRight))
+            fi
+        done < $m2
+
+    else
+        echo "At least one of the files passed in is not readable" 1>&2
+        exit 1
+    fi
+
+#print error if argument count does not equal 2 as instructed in requirements
+else
+    echo "Argument count does not equal 2" 1>&2
+    exit 1
+
+fi
+
+# columns calculated is the aggregate total of colums
+# divide by number of Left to get the actual number of columns - 1
+
+cols=$(( $colsLeft / $rowsLeft))
+cols=$(( $colsRight / $rowsRight))
+
+# add 1 as the number of tabs is one less of the number of columns
+((colsLeft++))
+((colsRight++))
+
+# if [[$rowsLeft -ne $rowsRight ]] && [[ $colsLeft -ne $colsRight ]]
+# then
+
+# else
+#     echo "At least one of the files passed in is not readable" 1>&2
+#     exit 1
+# fi
+# #print results
+# echo -e "$rowsLeft $colsLeft"
+# echo -e "$rowsRight $colsRight"
+
+}
+
 
 $@
 
