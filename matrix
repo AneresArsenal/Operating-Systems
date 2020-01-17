@@ -1,5 +1,6 @@
 #!/bin/bash
 
+<<<<<<< Updated upstream
 
 # while read num
 # do
@@ -10,9 +11,14 @@
 #     echo -e "End of loop\n"
 
 # done < "$1"
+=======
+# # create trap signal if error happens, to remove temp files created 
+trap 'rm -f $inputFile $column $tempFile $line $finalFile $meanArr $tempRow $transposeinputFile $transposecolumn $transposetempFile $transposefinalFile $finalMatrix  $sumArr ; exit 1' INT HUP TERM
+>>>>>>> Stashed changes
 
 sum=0
 rows=0
+<<<<<<< Updated upstream
 columns=0
 
 function dims() {
@@ -20,19 +26,77 @@ function dims() {
 if [ "$#" -eq 1 ]
 then
     if [ -e $1 ]
+=======
+cols=0
+
+
+############################################ dims ############################################
+# dims function print the dimensions of the matrix as the number of rows, 
+# followed by a space, then the number of columns.
+#
+# call function via matrix dims [MATRIX]
+#
+# Prints error message to stderr, nothing to stdout and return value != 0 if:
+# 1. Argument count is greater than 1 (e.g. `matrix dims m1 m2`).
+# 2. Argument count is 1 but the file named by argument 1 is not readable 
+#    (e.g. `matrix dims no_such_file`).
+# 
+# If no error is detected, prints "ROWS COLS" (Space separated!) to stdout, 
+# nothing to stderr, and returns 0.
+##############################################################################################
+
+function dims() {
+
+    # check if one argument is passed in
+    if [ "$#" -eq 1 ]
+    then
+        # check if file is readable i.e exists
+        if [ -e $1 ]
+        then
+            while IFS= read -rN1 char
+            do
+                #use newline to count rows
+                if [[ "$char" == $'\n' ]]; 
+                then 
+                    ((++rows))
+                fi
+                # use tabs to count columns
+                if [[ "$char" == $'\t' ]]; 
+                then 
+                    ((++cols))
+                fi
+            done < "$1"
+            
+        else
+            echo "File named by argument 1 is not readable" 1>&2
+            exit 1
+        fi
+
+    # if no argument is passed, read from stdin
+    elif [ "$#" -eq 0 ]
+>>>>>>> Stashed changes
     then
         while IFS= read -rN1 char
         do
             if [[ "$char" == $'\n' ]]; 
-                then ((++rows))
+            then 
+                ((++rows))
             fi
             if [[ "$char" == $'\t' ]]; 
+<<<<<<< Updated upstream
                 then ((++columns))
+=======
+            then 
+                ((++cols))
+>>>>>>> Stashed changes
             fi
-        done < "$1"
+        done < /dev/stdin
+
+    #print error if argument count exceeds 1 as instructed in requirements
     else
-        echo "File named by argument 1 is not readable" 1>&2
+        echo "Argument count is greater than 1" 1>&2
         exit 1
+<<<<<<< Updated upstream
     fi
 
 elif [ "$#" -eq 0 ]
@@ -55,10 +119,26 @@ fi
 columns=$(( $columns / $rows))
 ((columns++))
 echo -e "$rows $columns"
+=======
+
+    fi
+
+    # columns calculated is the aggregate total of colums
+    # divide by number of rows to get the actual number of columns - 1
+
+    cols=$(( $cols / $rows))
+
+    # add 1 as the number of tabs is one less of the number of columns
+    ((cols++))
+
+    #print results
+    echo -e "$rows $cols"
+>>>>>>> Stashed changes
 }
 
 function transpose() {
 
+<<<<<<< Updated upstream
 inputFile="transposeFile"
 column="transposeColFile"
 tempFile="transposeTempFile"
@@ -85,14 +165,133 @@ then
 
         # echo -e "Pre-transpose: number of rows $rows \n"
         # echo -e "Pre-transpose: number of columns $columns \n"
+=======
+    #create files used in transpose function
+    inputFile="transposeFile$$"
+    column="transposeColFile$$"
+    tempFile="transposeTempFile$$"
+    finalFile="transposeFinalFile$$"
+    flag=0
+
+    # check if one argument is passed in
+    if [ "$#" -eq 1 ]
+    then
+        # check if file is readable i.e exists
+        if [ -e $1 ]
+        then
+            while IFS= read -rN1 char
+            do
+                #use newline to count rows
+                if [[ "$char" == $'\n' ]]; 
+                then 
+                    ((++rows))
+                fi
+                # use tabs to count columns
+                if [[ "$char" == $'\t' ]]; 
+                then 
+                    ((++cols))
+                fi
+            done < $1
+
+            # columns calculated is the aggregate total of colums
+            # divide by number of rows to get the actual number of columns - 1
+            cols=$(( $cols / $rows))
+            # add 1 as the number of tabs is one less of the number of columns
+            ((cols++))
+
+            # add 1 for the while loop dim column check
+            ((cols++))
+            
+            flag=0
+            # j=0
+            
+            while read myLine
+            do
+                # read line by line from file
+                echo -e "$myLine" > $inputFile
+
+                #read first line to override old file
+                if [ $flag -ne 1 ]
+                then
+                    # set flag to 1 after first line read
+                    flag=1
+                    # cut first column of first row
+                    cut -f 1 $inputFile > $column
+                    i=2
+                    # cut rest of the columns using iterator by checking it is within the column length
+                    while [ $i -ne $cols ]
+                    do
+                        cut -f $i $inputFile >> $column
+                        ((++i))
+                    done
+                    cat $column > $tempFile
+                    
+                else
+                    # cut rest of the rows
+                    # cut first column of the row
+                    cut -f 1 $inputFile > $column
+                    i=2
+                    # cut rest of the columns using iterator by checking it is within the column length
+                    while [ $i -ne $cols ]
+                    do
+                        cut -f $i $inputFile >> $column
+                        ((++i))
+                    done
+                    
+                    # combine both files horizontally
+                    paste $tempFile $column > $finalFile
+
+                    cat $finalFile > $tempFile
+                    
+                fi
+            done < $1     
+
+            # display results
+            cat $finalFile
+
+            # remove temp files if no error
+            if [ $? -eq 0 ]
+            then
+                    rm -f $inputFile
+                    rm -f $column
+                    rm -f $tempFile
+                    rm -f $finalFile
+            fi
+
+        else
+            echo "File named by argument 1 is not readable" 1>&2
+            exit 1
+        fi
+
+    # if no argument is passed, read from stdin, functions as the same as the above
+    elif [ "$#" -eq 0 ]
+    then
+        while IFS= read -rN1 char
+        do
+            #use newline to count rows
+            if [[ "$char" == $'\n' ]]; 
+            then 
+                ((++rows))
+            fi
+            # use tabs to count columns
+            if [[ "$char" == $'\t' ]]; 
+            then 
+                ((++cols))
+            fi
+        done < /dev/stdin
+
+        cols=$(( $cols / $rows))
+        ((cols++))
+>>>>>>> Stashed changes
         
         ((++rows))
         ((++rows))
         flag=0
-        # j=0
-        
+        j=0
+            
         while read myLine
         do
+<<<<<<< Updated upstream
         echo -e "$myLine" > $inputFile
         if [ $flag -ne 1 ]
         then
@@ -130,11 +329,54 @@ then
         # echo -e "post-transpose: number of columns $j"   
         # done < /dev/stdin
         cat $finalFile
+=======
+            echo -e "$myLine" > $inputFile
+            if [ $flag -ne 1 ]
+            then
+                flag=1
+                ((++j))
+                cut -f 1 $inputFile > $column
+                i=2
+                while [ $i -ne $cols ]
+                do
+                    cut -f $i $inputFile >> $column
+                    ((++i))
+                done
+                cat $column > $tempFile
+            else
+                ((++j))
+                cut -f 1 $inputFile > $column
+                i=2
+                while [ $i -ne $cols ]
+                do
+                    cut -f $i $inputFile >> $column
+                    ((++i))
+                done
+
+                paste $tempFile $column > $finalFile
+                cat $finalFile > $tempFile
+            fi
+        done < /dev/stdin
+
+        cat $finalFile
+
+        # remove temp files if no error
+        if [ $? -eq 0 ]
+        then
+                rm -f $inputFile
+                rm -f $column
+                rm -f $tempFile
+                rm -f $finalFile
+        fi
+
+    # throw error if argument greater than 1
+>>>>>>> Stashed changes
     else
-        echo "File named by argument 1 is not readable" 1>&2
+        echo "Argument count is greater than 1" 1>&2
         exit 1
     fi
 
+<<<<<<< Updated upstream
 elif [ "$#" -eq 0 ]
 then
     while IFS= read -rN1 char
@@ -203,10 +445,13 @@ else
     exit 1
 fi
 
+=======
+>>>>>>> Stashed changes
 }
 
 function mean(){
 
+<<<<<<< Updated upstream
 inputFile="meanFile"
 column="meanCol"
 flag=0
@@ -218,8 +463,178 @@ meanArr="meanArray"
 if [ "$#" -eq 1 ]
 then
     if [ -e $1 ]
-    then
+=======
+    # temp files used for calculations
+    inputFile="meanFile$$"
+    line="meanLine$$"
+    flag=0
+    sum=0
+    rows=0
+    cols=0
+    mean=0
+    meanArr="meanArray$$"
+    tempRow="meanTempRow$$"
+    transposeinputFile="meantransposeFile$$"
+    transposecolumn="meantransposeColFile$$"
+    transposetempFile="meantransposeTempFile$$"
+    transposefinalFile="meantransposeFinalFile$$"
 
+
+    if [ "$#" -eq 1 ]
+>>>>>>> Stashed changes
+    then
+        if [ -e $1 ]
+        then
+
+            while IFS= read -rN1 char
+            do
+                #use newline to count rows
+                if [[ "$char" == $'\n' ]]; 
+                then 
+                    ((++rows))
+                fi
+                # use tabs to count columns
+                if [[ "$char" == $'\t' ]]; 
+                then 
+                    ((++cols))
+                fi
+            done < $1
+
+            cols=$(( $cols / $rows))
+            ((cols++))
+
+            flag=0
+            j=0
+                
+            # transpose matrix to allow for easier calculation (using same transpose method above)
+            while read myLine
+            do
+                echo -e "$myLine" > $transposeinputFile
+                if [ $flag -ne 1 ]
+                then
+                    flag=1
+                    ((++j))
+                    cut -f 1 $transposeinputFile > $transposecolumn
+                    i=2
+                    while [ $i -le $cols ]
+                    do
+                        cut -f $i $transposeinputFile >> $transposecolumn
+                        ((++i))
+                    done
+                    cat $transposecolumn > $transposetempFile
+                else
+                    ((++j))
+                    cut -f 1 $transposeinputFile > $transposecolumn
+                    i=2
+                    while [ $i -le $cols ]
+                    do
+                        cut -f $i $transposeinputFile >> $transposecolumn
+                        ((++i))
+                    done
+
+                    paste $transposetempFile $transposecolumn > $transposefinalFile
+                    cat $transposefinalFile > $transposetempFile
+                fi
+            done < $1 
+
+            flag=0
+                
+            # for each line, add up the totoal and divided by the original row count to get the mean for each column
+            while IFS=$'\t' read -r -a currentLine
+            do
+                # echo -e "$currentLine"
+                for i in "${currentLine[@]}"
+                do 
+                    # echo "num: $i"
+                    sum=`expr $sum + $i`
+                    # echo "sum: $sum"
+                done
+                # echo "sum: $sum"    
+                mean=$(( $sum / $rows ))
+
+                #perform rounding calculation using the remainder
+
+                round=$(( $sum % $rows ))
+
+                # double the remainder to compare it to the number of rows (i.e. divider)
+                # if it is greater than or equal the divider (0.5 and above), then round up, 
+                # else if less than divider then round down
+                # exception: when remainder equals nothing, do nothing
+
+                round=$(( $round + $round ))
+
+                # calculation for positive mean
+                if [ $round -gt 0 ]
+                then
+                    if [ $round -ge $rows ]
+                    then
+                        round=1
+                    else
+                        round=0
+                    fi
+                    mean=$(( $mean + $round ))
+                
+                # no remainder, do nothing
+                elif [ $round -eq 0 ]
+                then
+                    mean=$(( $mean + 0 ))
+                
+                # calculation for negative mean
+                else
+                    if [ $round -le $rows ]
+                    then
+                        round=-1
+                    else
+                        round=0
+                    fi
+                    mean=$(( $mean + $round ))
+                fi
+
+                # use flag to determine if it is the first line to overwrite old file if it exist
+                if [ $flag -ne 1 ]
+                then
+                    flag=1
+                    echo "$mean" > $meanArr
+                else
+                    echo "$mean" >> $meanArr
+                fi
+                mean=0
+                sum=0
+            done < $transposefinalFile
+            
+
+            # transpose results
+            cat $meanArr | tr '\n' '\t' > $tempRow
+
+            # remove trailing tab
+            truncate -s-1 $tempRow
+
+            # add newline at the end
+            printf "\n" >> "$tempRow"
+
+            # print results
+            cat "$tempRow"
+
+            #if no issues, remove temp files
+            if [ $? -eq 0 ]
+            then
+                rm -f $meanArr
+                rm -f $tempRow
+                rm -f $inputFile
+                rm -f $line
+                rm -f $meanArr
+                rm -f $transposeinputFile
+                rm -f $transposecolumn
+                rm -f $transposetempFile
+                rm -f $transposefinalFile
+            fi
+
+        else
+            echo "File named by argument 1 is not readable" 1>&2
+            exit 1
+        fi
+
+<<<<<<< Updated upstream
     while IFS= read -rN1 char
         do
         if [[ "$char" == $'\n' ]]; 
@@ -229,9 +644,28 @@ then
             then ((++columns))
         fi
         done < $1
+=======
+    # if no argument is passed, read from stdin, functions as the same as the above
+    elif [ "$#" -eq 0 ]
+    then
+        while IFS= read -rN1 char
+        do
+            #use newline to count rows
+            if [[ "$char" == $'\n' ]]; 
+            then 
+                ((++rows))
+            fi
+            # use tabs to count columns
+            if [[ "$char" == $'\t' ]]; 
+            then 
+                ((++cols))
+            fi
+        done < /dev/stdin
+>>>>>>> Stashed changes
 
     columns=$(( $columns / $rows))
 
+<<<<<<< Updated upstream
     echo -e "Pre-transpose: number of rows $rows \n"
     echo -e "Pre-transpose: number of columns $columns \n"
 
@@ -265,23 +699,538 @@ then
 
     cat $meanArr
 
+=======
+        flag=0
+        j=0
+                
+        while read myLine
+        do
+            echo -e "$myLine" > $transposeinputFile
+            if [ $flag -ne 1 ]
+            then
+                flag=1
+                ((++j))
+                cut -f 1 $transposeinputFile > $transposecolumn
+                i=2
+                while [ $i -le $cols ]
+                do
+                    cut -f $i $transposeinputFile >> $transposecolumn
+                    ((++i))
+                done
+                cat $transposecolumn > $transposetempFile
+            else
+                ((++j))
+                cut -f 1 $transposeinputFile > $transposecolumn
+                i=2
+                while [ $i -le $cols ]
+                do
+                    cut -f $i $transposeinputFile >> $transposecolumn
+                    ((++i))
+                done
+
+                paste $transposetempFile $transposecolumn > $transposefinalFile
+                cat $transposefinalFile > $transposetempFile
+            fi
+        done < /dev/stdin
+
+        flag=0
+            
+        # for each line, add up the totoal and divided by the original row count to get the mean for each column
+        while IFS=$'\t' read -r -a currentLine
+        do
+            # echo -e "$currentLine"
+            for i in "${currentLine[@]}"
+            do 
+                # echo "num: $i"
+                sum=`expr $sum + $i`
+                # echo "sum: $sum"
+            done
+            # echo "sum: $sum"    
+            mean=$(( $sum / $rows ))
+
+            #perform rounding calculation using the remainder
+
+            round=$(( $sum % $rows ))
+
+            # double the remainder to compare it to the number of rows (i.e. divider)
+            # if it is greater than or equal the divider (0.5 and above), then round up, 
+            # else if less than divider then round down
+            # exception: when remainder equals nothing, do nothing
+
+            round=$(( $round + $round ))
+
+            # calculation for positive mean
+            if [ $round -gt 0 ]
+            then
+                if [ $round -ge $rows ]
+                then
+                    round=1
+                else
+                    round=0
+                fi
+                mean=$(( $mean + $round ))
+            
+            # no remainder, do nothing
+            elif [ $round -eq 0 ]
+            then
+                mean=$(( $mean + 0 ))
+            
+            # calculation for negative mean
+            else
+                if [ $round -le $rows ]
+                then
+                    round=-1
+                else
+                    round=0
+                fi
+                mean=$(( $mean + $round ))
+            fi
+            
+            # use flag to determine if it is the first line to overwrite old file if it exist
+            if [ $flag -ne 1 ]
+            then
+                flag=1
+                echo "$mean" > $meanArr
+            else
+                echo "$mean" >> $meanArr
+            fi
+            mean=0
+            sum=0
+        done < $transposefinalFile
+        
+
+        # transpose results
+        cat $meanArr | tr '\n' '\t' > $tempRow
+
+        # remove trailing tab
+        truncate -s-1 $tempRow
+
+        # add newline at the end
+        printf "\n" >> "$tempRow"
+
+        # print results
+        cat "$tempRow"
+
+        #if no issues, remove temp files
+        if [ $? -eq 0 ]
+        then
+            rm -f $meanArr
+            rm -f $tempRow
+            rm -f $inputFile
+            rm -f $line
+            rm -f $meanArr
+            rm -f $transposeinputFile
+            rm -f $transposecolumn
+            rm -f $transposetempFile
+            rm -f $transposefinalFile
+        fi
+>>>>>>> Stashed changes
     else
-        echo "File named by argument 1 is not readable" 1>&2
-        exit 1
+    echo "Argument count is greater than 1" 1>&2
+    exit 1
     fi
-
-
-else
-echo "Argument count is greater than 1" 1>&2
-exit 1
-fi
 
 }
 
+<<<<<<< Updated upstream
+=======
+
+########################################## add #################################################
+# add should take two MxN matrices and add them together element-wise to produce an MxN matrix. 
+# add should return an error if the matrices do not have the same dimensions.
+#
+# call function via matrix add [MATRIX_LEFT] [MATRIX_RIGHT]
+#
+# Prints error message to stderr, nothing to stdout and return value != 0 if:
+# 1. Argument count does not equal 2 (e.g. `matrix add m1 m2 m3` or `matrix add m1`).
+# 2. Argument count is 2 but the file named by either argument is not readable 
+#   (e.g. `matrix add m1 no_such_file`). The dimensions of the input matrices do not allow them
+#   to be added together following the rules of matrix addition.
+#
+# If no error is detected, prints a row vector mean of the input matrix, in a valid matrix 
+# format to stdout, nothing to stderr, and returns 0. All values must round to the 
+# nearest integer, with ***.5 values rounded away from zero.
+################################################################################################
+
+function add() {
+
+    # variables and temp files created
+    rowsLeft=0
+    rowsRight=0
+    columnLeft=0
+    columnRight=0
+    finalMatrix="addfinalMatrix$$"
+    tempRow="addTempFile$$"
+    sumArr="addSumArr$$"
+
+    # check if 2 arguments are passed in
+    if [ "$#" -eq 2 ]
+    then
+        # check if both files are readable i.e exists to avoid read error
+        if [[ -e $1 ]] && [[ -e $2 ]]
+        then
+            while IFS= read -rN1 char
+            do
+                #use newline to count rows
+                if [[ "$char" == $'\n' ]]; 
+                then 
+                    ((++rowsLeft))
+                fi
+                # use tabs to count columns
+                if [[ "$char" == $'\t' ]]; 
+                then 
+                    ((++colsLeft))
+                fi
+            done < $1
+
+            # read char by char
+            while IFS= read -rN1 char
+            do
+                #use newline to count rows
+                if [[ "$char" == $'\n' ]]; 
+                then 
+                    ((++rowsRight))
+                fi
+                # use tabs to count columns
+                if [[ "$char" == $'\t' ]]; 
+                then 
+                    ((++colsRight))
+                fi
+            done < $2
+
+            # columns calculated is the aggregate total of colums
+            # divide by number of Left to get the actual number of columns - 1
+
+            colsLeft=$(( $colsLeft / $rowsLeft))
+            colsRight=$(( $colsRight / $rowsRight))
+
+            # add 1 as the number of tabs is one less of the number of columns
+            ((colsLeft++))
+            ((colsRight++))
+
+            reset=0
+
+            # make sure both matrices have the same dimension
+            if [[ $rowsLeft -eq $rowsRight ]] && [[ $colsLeft -eq $colsRight ]]
+            then
+                # read each field separated by tabs
+                while IFS=$'\t' read -r  -a lineA && IFS=$'\t' read -r  -a lineB <&3
+                do
+                    j=0
+                    flag=0
+                    # iterate through array and add each at position i(which equals j) in both matrices
+                    for i in "${lineA[@]}"
+                    do
+                        # reset sum
+                        sum=0
+                        sum=`expr $i + ${lineB[$j]}`
+
+                        # to iterate through second matrix manually
+                        ((j++))
+
+                        # use flag to determine if it is the first line to overwrite old file if it exist
+                        if [ $flag -ne 1 ]
+                        then
+                            flag=1
+                            echo "$sum" > $sumArr
+                        else
+                            echo "$sum" >> $sumArr
+                        fi
+
+                    done 
+
+                    # transpose each column back into a row
+                    cat $sumArr | tr '\n' '\t' > $tempRow
+
+                    # remove trailing tab
+                    truncate -s-1 $tempRow
+
+                    # add newline
+                    printf "\n" >> "$tempRow"
+                    
+                    # to wipe old matrix for each run using flag
+                    if [ $reset -ne 1 ]
+                    then
+                        reset=1
+                        cat $tempRow > $finalMatrix
+                    else
+                        cat $tempRow >> $finalMatrix
+                    fi
+
+                # read both matrices simulatenously
+                done <$1 3<$2
+
+                # display results
+                cat $finalMatrix
+
+                # remove temp files
+                if [ $? -eq 0 ]
+                then
+                    rm -f $sumArr
+                    rm -f $tempRow
+                    rm -f $finalMatrix
+                fi
+
+            else
+                echo "Matrices do not have equal dimensions" 1>&2
+                exit 1
+            fi
+
+        else
+            echo "At least one of the files passed in is not readable" 1>&2
+            exit 1
+        fi
+
+    #print error if argument count does not equal 2 as instructed in requirements
+    else
+        echo "Argument count does not equal 2" 1>&2
+        exit 1
+
+    fi
+
+}
+
+
+########################################## multiply #################################################
+# multiply should take an MxN and NxP matrix and produce an MxP matrix. Note that, unlike addition, 
+# matrix multiplication is not commutative. That is A*B != B*A.
+#
+# call function via matrix multiply [MATRIX_LEFT] [MATRIX_RIGHT]
+#
+# Prints error message to stderr, nothing to stdout and return value != 0 if:
+# 1. Argument count does not equal 2 (e.g. `matrix add m1 m2 m3` or `matrix add m1`).
+# 2. Argument count is 2 but the file named by either argument is not readable 
+#   (e.g. `matrix add m1 no_such_file`). The dimensions of the input matrices do not allow them
+#   to be added together following the rules of matrix addition.
+# 3. The dimensions of the input matrices do not allow them to be multiplied together following 
+#   the rules of matrix multiplication.
+#
+# If no error is detected, prints the product of both matrices, with the first argument as the
+# left matrix and the second argument as the right matrix, in a valid matrix format to stdout, 
+# nothing to stderr, and returns 0. (`matrix multiply A B` should return A*B, not B*A)
+################################################################################################
+
+function multiply() {
+
+    # create temp files
+    rowsLeft=0
+    rowsRight=0
+    columnLeft=0
+    columnRight=0
+    finalMatrix="multiplyFinalMatrix$$"
+    tempRow="multiplyTempRow$$"
+    sumArr="multiplySumArr$$"
+    inputFile="multiplyInputFile$$"
+    column="multiplyColumn$$"
+    tempFile="multiplyTempFile$$"
+    finalFile="multiplyFinalFile$$"
+
+    # check if 2 arguments are passed in
+    if [ "$#" -eq 2 ]
+    then
+        # check if both files are readable i.e exists to avoid read error
+        if [[ -e $1 ]] && [[ -e $2 ]]
+        then
+            while IFS= read -rN1 char
+            do
+                #use newline to count rows
+                if [[ "$char" == $'\n' ]]; 
+                then 
+                    ((++rowsLeft))
+                fi
+                # use tabs to count columns
+                if [[ "$char" == $'\t' ]]; 
+                then 
+                    ((++colsLeft))
+                fi
+            done < $1
+
+            while IFS= read -rN1 char
+            do
+                #use newline to count rows
+                if [[ "$char" == $'\n' ]]; 
+                then 
+                    ((++rowsRight))
+                fi
+                # use tabs to count columns
+                if [[ "$char" == $'\t' ]]; 
+                then 
+                    ((++colsRight))
+                fi
+            done < $2
+
+            # columns calculated is the aggregate total of colums
+            # divide by number of Left to get the actual number of columns - 1
+
+            colsLeft=$(( $colsLeft / $rowsLeft))
+            colsRight=$(( $colsRight / $rowsRight))
+
+            # add 1 as the number of tabs is one less of the number of columns
+            ((colsLeft++))
+            ((colsRight++))
+
+            flag=0
+            ((colsRight++))
+
+            # transpose second matrix this allows a more convenient iteration of each column as a 
+            # transposed "row" when performing the multiplication with the first matrix
+            while read myLine
+            do
+                # read line by line from file
+                echo -e "$myLine" > $inputFile
+
+                #read first line to override old file
+                if [ $flag -ne 1 ]
+                then
+                    # set flag to 1 after first line read
+                    flag=1
+                    # cut first column of first row
+                    cut -f 1 $inputFile > $column
+                    i=2
+                    # cut rest of the columns using iterator by checking it is within the column length
+                    while [ $i -ne $colsRight ]
+                    do
+                        cut -f $i $inputFile >> $column
+                        ((++i))
+                    done
+                    cat $column > $tempFile
+                    if [ $? -eq 0 ]
+                    then
+                        rm -f $column
+                    fi
+                else
+                    # cut rest of the rows
+                    # cut first column of the row
+                    cut -f 1 $inputFile > $column
+                    i=2
+                    # cut rest of the columns using iterator by checking it is within the column length
+                    while [ $i -ne $colsRight ]
+                    do
+                        cut -f $i $inputFile >> $column
+                        ((++i))
+                    done
+                    
+                    # combine both files horizontally using paste function
+                    paste $tempFile $column > $finalFile
+                    if [ $? -eq 0 ]
+                    then
+                        rm -f $column
+                    fi
+                    cat $finalFile > $tempFile
+
+                fi
+            done < $2     
+
+
+            # no errors noted, remove temp files
+            if [ $? -eq 0 ]
+                then
+                    rm -f $inputFile
+            fi
+
+            reset=0
+
+            # to satisfy the matrix multiplication rule
+            if [[ $colsLeft -eq $rowsRight ]]
+            then
+                ((colsRight--))
+                reset=0
+                # read each field separated by tabs
+                while IFS=$'\t' read -r  -a lineA
+                do
+                    flag=0
+                    while IFS=$'\t' read -r  -a lineB <&3
+                    do
+                        j=0
+                        sum=0
+                        while [ $j -ne $rowsRight ]
+                        do
+                            mul=0
+                            # echo "left: ${lineA[$j]}     right:  ${lineB[$j]}"
+
+                            # iterate through both lines using j as an iterator to perform multiplication
+                            mul=$(( ${lineA[$j]} * ${lineB[$j]} ))
+                            # echo "$mul"
+                            sum=$(( $sum + $mul ))
+                            ((++j))
+                        done
+                        # use flag to determine if it is the first line to overwrite old file if it exist
+                        if [ $flag -ne 1 ]
+                        then
+                            flag=1
+                            echo "$sum" > $sumArr
+                        else
+                            echo "$sum" >> $sumArr
+                        fi
+
+                    done 3<"$finalFile"
+
+                    cat $sumArr | tr '\n' '\t' > $tempRow
+                    truncate -s-1 $tempRow
+                    printf "\n" >> "$tempRow"
+
+                    # use flag to determine if it is the first line to overwrite old file if it exist
+                    if [ $reset -ne 1 ]
+                    then
+                        reset=1
+                        cat $tempRow > $finalMatrix
+                    else
+                        cat $tempRow >> $finalMatrix
+                    fi
+
+                done <$1 
+
+                cat $finalMatrix
+
+                # remove all temp files if no errors detected
+                if [ $? -eq 0 ]
+                then
+                    rm -f $sumArr
+                    rm -f $tempRow
+                    rm -f $finalMatrix
+                    rm -f $inputFile
+                    rm -f $column
+                    rm -f $tempFile
+                    rm -f $finalFile
+                fi
+            
+
+            else
+                # at the event that both matrix does not match, remove temp files that still exist
+                rm -f $tempFile
+                rm -f $finalFile
+                echo "The dimensions of the input matrices do not allow them to be multiplied together following the rules of matrix multiplication." 1>&2
+                exit 1
+            fi
+
+        else
+            echo "At least one of the files passed in is not readable" 1>&2
+            exit 1
+        fi
+
+    #print error if argument count does not equal 2 as instructed in requirements
+    else
+        echo "Argument count does not equal 2" 1>&2
+        exit 1
+
+    fi
+
+}
+
+
+>>>>>>> Stashed changes
 $@
 
 # reference materials:
 # https://stackoverflow.com/questions/10929453/read-a-file-line-by-line-assigning-the-value-to-a-variable
 # https://stackoverflow.com/questions/18568706/check-number-of-arguments-passed-to-a-bash-script
 # https://stackoverflow.com/questions/6980090/how-to-read-from-a-file-or-stdin-in-bash
+<<<<<<< Updated upstream
 # https://stackoverflow.com/questions/638975/how-do-i-tell-if-a-regular-file-does-not-exist-in-bash
+=======
+# https://stackoverflow.com/questions/638975/how-do-i-tell-if-a-regular-file-does-not-exist-in-bash
+# https://stackoverflow.com/questions/8550385/how-to-read-1-line-from-2-files-sequentially
+# https://stackoverflow.com/questions/27305177/how-can-i-remove-the-last-character-of-a-file-in-unix
+# https://www.linuxjournal.com/content/use-bash-trap-statement-cleanup-temporary-files
+# https://stackoverflow.com/questions/40196298/using-paste-command-inside-shell-script
+>>>>>>> Stashed changes
