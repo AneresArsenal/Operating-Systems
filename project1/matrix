@@ -1,32 +1,10 @@
 #!/bin/bash
 
-<<<<<<< Updated upstream
-
-# while read num
-# do
-#     echo "In loop"
-#     echo "num: $num"
-#     sum=`expr $sum + $num`
-#     echo "sum: $sum"
-#     echo -e "End of loop\n"
-
-# done < "$1"
-=======
 # # create trap signal if error happens, to remove temp files created 
 trap 'rm -f $inputFile $column $tempFile $line $finalFile $meanArr $tempRow $transposeinputFile $transposecolumn $transposetempFile $transposefinalFile $finalMatrix  $sumArr ; exit 1' INT HUP TERM
->>>>>>> Stashed changes
 
 sum=0
 rows=0
-<<<<<<< Updated upstream
-columns=0
-
-function dims() {
-
-if [ "$#" -eq 1 ]
-then
-    if [ -e $1 ]
-=======
 cols=0
 
 
@@ -74,7 +52,6 @@ function dims() {
 
     # if no argument is passed, read from stdin
     elif [ "$#" -eq 0 ]
->>>>>>> Stashed changes
     then
         while IFS= read -rN1 char
         do
@@ -83,12 +60,8 @@ function dims() {
                 ((++rows))
             fi
             if [[ "$char" == $'\t' ]]; 
-<<<<<<< Updated upstream
-                then ((++columns))
-=======
             then 
                 ((++cols))
->>>>>>> Stashed changes
             fi
         done < /dev/stdin
 
@@ -96,30 +69,6 @@ function dims() {
     else
         echo "Argument count is greater than 1" 1>&2
         exit 1
-<<<<<<< Updated upstream
-    fi
-
-elif [ "$#" -eq 0 ]
-then
-    while IFS= read -rN1 char
-    do
-        if [[ "$char" == $'\n' ]]; 
-            then ((++rows))
-        fi
-        if [[ "$char" == $'\t' ]]; 
-            then ((++columns))
-        fi
-    done < /dev/stdin
-else
-    echo "Argument count is greater than 1" 1>&2
-    exit 1
-
-fi
-
-columns=$(( $columns / $rows))
-((columns++))
-echo -e "$rows $columns"
-=======
 
     fi
 
@@ -133,39 +82,10 @@ echo -e "$rows $columns"
 
     #print results
     echo -e "$rows $cols"
->>>>>>> Stashed changes
 }
 
 function transpose() {
 
-<<<<<<< Updated upstream
-inputFile="transposeFile"
-column="transposeColFile"
-tempFile="transposeTempFile"
-finalFile="transposeFinalFile"
-flag=0
-
-if [ "$#" -eq 1 ]
-then
-    if [ -e $1 ]
-    then
-        while IFS= read -rN1 char
-        do
-        if [[ "$char" == $'\n' ]]; 
-            then ((++rows))
-        fi
-        if [[ "$char" == $'\t' ]]; 
-            then ((++columns))
-        fi
-        done < $1
-
-        columns=$(( $columns / $rows))
-        ((columns++))
-        ((columns++))
-
-        # echo -e "Pre-transpose: number of rows $rows \n"
-        # echo -e "Pre-transpose: number of columns $columns \n"
-=======
     #create files used in transpose function
     inputFile="transposeFile$$"
     column="transposeColFile$$"
@@ -282,7 +202,6 @@ then
 
         cols=$(( $cols / $rows))
         ((cols++))
->>>>>>> Stashed changes
         
         ((++rows))
         ((++rows))
@@ -291,45 +210,6 @@ then
             
         while read myLine
         do
-<<<<<<< Updated upstream
-        echo -e "$myLine" > $inputFile
-        if [ $flag -ne 1 ]
-        then
-            flag=1
-            # ((++j))
-            cut -f 1 $inputFile > $column
-            i=2
-            while [ $i -ne $columns ]
-            do
-                cut -f $i $inputFile >> $column
-                ((++i))
-            done
-            cat $column > $tempFile
-        else
-            # ((++j))
-            cut -f 1 $inputFile > $column
-            i=2
-            while [ $i -ne $columns ]
-            do
-                cut -f $i $inputFile >> $column
-                ((++i))
-            done
-            
-            # echo -e "column file:\n"
-            # cat $column
-            # echo -e "temp file:\n"
-            # cat $tempFile
-
-            paste $tempFile $column > $finalFile
-            cat $finalFile > $tempFile
-        fi
-        done < $1     
-
-        # echo -e "post-transpose: number of rows $i"
-        # echo -e "post-transpose: number of columns $j"   
-        # done < /dev/stdin
-        cat $finalFile
-=======
             echo -e "$myLine" > $inputFile
             if [ $flag -ne 1 ]
             then
@@ -370,100 +250,15 @@ then
         fi
 
     # throw error if argument greater than 1
->>>>>>> Stashed changes
     else
         echo "Argument count is greater than 1" 1>&2
         exit 1
     fi
 
-<<<<<<< Updated upstream
-elif [ "$#" -eq 0 ]
-then
-    while IFS= read -rN1 char
-    do
-            if [[ "$char" == $'\n' ]]; 
-                then ((++rows))
-            fi
-            if [[ "$char" == $'\t' ]]; 
-                then ((++columns))
-            fi
-    done < $m1
-
-    columns=$(( $columns / $rows))
-    ((columns++))
-
-    # echo -e "Pre-transpose: number of rows $rows \n"
-    # echo -e "Pre-transpose: number of columns $columns \n"
-    
-    ((++rows))
-    ((++rows))
-    flag=0
-    j=0
-        
-    while read myLine
-    do
-        echo -e "$myLine" > $inputFile
-        if [ $flag -ne 1 ]
-        then
-            flag=1
-            ((++j))
-            cut -f 1 $inputFile > $column
-            i=2
-            while [ $i -ne $columns ]
-            do
-                cut -f $i $inputFile >> $column
-                ((++i))
-            done
-            cat $column > $tempFile
-        else
-            ((++j))
-            cut -f 1 $inputFile > $column
-            i=2
-            while [ $i -ne $columns ]
-            do
-                cut -f $i $inputFile >> $column
-                ((++i))
-            done
-            
-            # echo -e "column file:\n"
-            # cat $column
-            # echo -e "temp file:\n"
-            # cat $tempFile
-
-            paste $tempFile $column > $finalFile
-            cat $finalFile > $tempFile
-        fi
-    done < /dev/stdin
-    # done < $m1     
-    # echo -e "post-transpose: number of rows $i"
-    # echo -e "post-transpose: number of columns $j"   
-
-    cat $finalFile
-
-else
-    echo "Argument count is greater than 1" 1>&2
-    exit 1
-fi
-
-=======
->>>>>>> Stashed changes
 }
 
 function mean(){
 
-<<<<<<< Updated upstream
-inputFile="meanFile"
-column="meanCol"
-flag=0
-sum=0
-rows=0
-mean=0
-meanArr="meanArray"
-
-if [ "$#" -eq 1 ]
-then
-    if [ -e $1 ]
-=======
     # temp files used for calculations
     inputFile="meanFile$$"
     line="meanLine$$"
@@ -481,7 +276,6 @@ then
 
 
     if [ "$#" -eq 1 ]
->>>>>>> Stashed changes
     then
         if [ -e $1 ]
         then
@@ -634,17 +428,6 @@ then
             exit 1
         fi
 
-<<<<<<< Updated upstream
-    while IFS= read -rN1 char
-        do
-        if [[ "$char" == $'\n' ]]; 
-            then ((++rows))
-        fi
-        if [[ "$char" == $'\t' ]]; 
-            then ((++columns))
-        fi
-        done < $1
-=======
     # if no argument is passed, read from stdin, functions as the same as the above
     elif [ "$#" -eq 0 ]
     then
@@ -661,45 +444,9 @@ then
                 ((++cols))
             fi
         done < /dev/stdin
->>>>>>> Stashed changes
 
     columns=$(( $columns / $rows))
 
-<<<<<<< Updated upstream
-    echo -e "Pre-transpose: number of rows $rows \n"
-    echo -e "Pre-transpose: number of columns $columns \n"
-
-    ((++rows))
-    ((++rows))
-
-    while read myLine
-    do
-        echo -e "$myLine \n"
-        echo -e "$myLine" > $inputFile
-        cut -f 1 $inputFile > $column
-        i=2
-        while [ $i -ne $rows ]
-        do
-            cut -f $i $inputFile >> $column
-            ((++i))
-        done
-        while read num
-        do
-            echo -e "$num \n"
-            sum=`expr $sum + $num`
-        done < $column
-        echo "sum: $sum"
-        # sum=$(( $sum + $rows - 1 ))
-        # mean=$(( $sum / $rows ))
-        # echo "mean: $mean"
-        # cat $mean >> $meanArr
-        mean=0
-        sum=0
-    done < $1
-
-    cat $meanArr
-
-=======
         flag=0
         j=0
                 
@@ -824,7 +571,6 @@ then
             rm -f $transposetempFile
             rm -f $transposefinalFile
         fi
->>>>>>> Stashed changes
     else
     echo "Argument count is greater than 1" 1>&2
     exit 1
@@ -832,8 +578,6 @@ then
 
 }
 
-<<<<<<< Updated upstream
-=======
 
 ########################################## add #################################################
 # add should take two MxN matrices and add them together element-wise to produce an MxN matrix. 
@@ -1218,19 +962,14 @@ function multiply() {
 }
 
 
->>>>>>> Stashed changes
 $@
 
 # reference materials:
 # https://stackoverflow.com/questions/10929453/read-a-file-line-by-line-assigning-the-value-to-a-variable
 # https://stackoverflow.com/questions/18568706/check-number-of-arguments-passed-to-a-bash-script
 # https://stackoverflow.com/questions/6980090/how-to-read-from-a-file-or-stdin-in-bash
-<<<<<<< Updated upstream
-# https://stackoverflow.com/questions/638975/how-do-i-tell-if-a-regular-file-does-not-exist-in-bash
-=======
 # https://stackoverflow.com/questions/638975/how-do-i-tell-if-a-regular-file-does-not-exist-in-bash
 # https://stackoverflow.com/questions/8550385/how-to-read-1-line-from-2-files-sequentially
 # https://stackoverflow.com/questions/27305177/how-can-i-remove-the-last-character-of-a-file-in-unix
 # https://www.linuxjournal.com/content/use-bash-trap-statement-cleanup-temporary-files
 # https://stackoverflow.com/questions/40196298/using-paste-command-inside-shell-script
->>>>>>> Stashed changes
