@@ -3,6 +3,7 @@
 # # create trap signal if error happens, to remove temp files created 
 trap 'rm -f $inputFile $column $tempFile $line $finalFile $meanArr $tempRow $transposeinputFile $transposecolumn $transposetempFile $transposefinalFile $finalMatrix  $sumArr ; exit 1' INT HUP TERM
 
+# global variables used to identify the dimensions of the matrix passed in
 sum=0
 rows=0
 cols=0
@@ -31,6 +32,7 @@ function dims() {
         # check if file is readable i.e exists
         if [ -e $1 ]
         then
+            # read char by char to detect newlines and tabs
             while IFS= read -rN1 char
             do
                 #use newline to count rows
@@ -46,6 +48,7 @@ function dims() {
             done < "$1"
             
         else
+            # throw error when file is not readable
             echo "File named by argument 1 is not readable" 1>&2
             exit 1
         fi
@@ -53,20 +56,23 @@ function dims() {
     # if no argument is passed, read from stdin
     elif [ "$#" -eq 0 ]
     then
+        # read char by char to detect newlines and tabs
         while IFS= read -rN1 char
         do
+            #use newline to count rows
             if [[ "$char" == $'\n' ]]; 
             then 
                 ((++rows))
             fi
+            # use tabs to count columns
             if [[ "$char" == $'\t' ]]; 
             then 
                 ((++cols))
             fi
         done < /dev/stdin
 
-    #print error if argument count exceeds 1 as instructed in requirements
     else
+        #print error if argument count exceeds 1 as instructed in requirements
         echo "Argument count is greater than 1" 1>&2
         exit 1
 
@@ -80,9 +86,25 @@ function dims() {
     # add 1 as the number of tabs is one less of the number of columns
     ((cols++))
 
-    #print results
+    #print results in format required
     echo -e "$rows $cols"
 }
+
+####################################### transpose #######################################
+# transpose should reflect the elements of the matrix along the main diagonal. 
+# Thus, an MxN matrix will become an NxM matrix and the values along the main diagonal 
+# will remain unchanged.
+#
+# call function via matrix transpose [MATRIX]
+#
+# Prints error message to stderr, nothing to stdout and return value != 0 if:
+# 1. Argument count is greater than 1 (e.g. `matrix transpose m1 m2`).
+# 2. Argument count is 1 but the file named by argument 1 is not readable 
+#    (e.g. `matrix transpose no_such_file`).
+#
+# If no error is detected, prints the transpose of the input, in a valid matrix format 
+# to stdout, nothing to stderr, and returns 0.
+#########################################################################################
 
 function transpose() {
 
@@ -99,6 +121,7 @@ function transpose() {
         # check if file is readable i.e exists
         if [ -e $1 ]
         then
+            # read char by char to detect newlines and tabs
             while IFS= read -rN1 char
             do
                 #use newline to count rows
@@ -144,6 +167,8 @@ function transpose() {
                         cut -f $i $inputFile >> $column
                         ((++i))
                     done
+
+                    # copy the first column into the temp file
                     cat $column > $tempFile
                     
                 else
@@ -158,9 +183,10 @@ function transpose() {
                         ((++i))
                     done
                     
-                    # combine both files horizontally
+                    # combine both files horizontally (column to colum)
                     paste $tempFile $column > $finalFile
 
+                    # copy the entire transposed rows into temp file and loop through all rows/lines
                     cat $finalFile > $tempFile
                     
                 fi
@@ -179,6 +205,7 @@ function transpose() {
             fi
 
         else
+            # throw error when file is not readable
             echo "File named by argument 1 is not readable" 1>&2
             exit 1
         fi
@@ -186,6 +213,7 @@ function transpose() {
     # if no argument is passed, read from stdin, functions as the same as the above
     elif [ "$#" -eq 0 ]
     then
+        # read char by char to detect newlines and tabs
         while IFS= read -rN1 char
         do
             #use newline to count rows
@@ -251,11 +279,28 @@ function transpose() {
 
     # throw error if argument greater than 1
     else
+        #print error if argument count exceeds 1 as instructed in requirements
         echo "Argument count is greater than 1" 1>&2
         exit 1
     fi
 
 }
+
+########################################## mean ##########################################
+# mean should take an MxN matrix and return an 1xN row vector, where the first element is 
+# the mean of column one, the second element is the mean of column two, and so on.
+#
+# call function via matrix mean [MATRIX]
+#
+# Prints error message to stderr, nothing to stdout and return value != 0 if:
+# 1. Argument count is greater than 1 (e.g. `matrix mean m1 m2`).
+# 2. Argument count is 1 but the file named by argument 1 is not readable 
+#    (e.g. `matrix transpose no_such_file`).
+#
+# If no error is detected, prints a row vector mean of the input matrix, in a valid matrix 
+# format to stdout, nothing to stderr, and returns 0. All values must round to the 
+# nearest integer, with ***.5 values rounded away from zero.
+###########################################################################################
 
 function mean(){
 
@@ -274,12 +319,13 @@ function mean(){
     transposetempFile="meantransposeTempFile$$"
     transposefinalFile="meantransposeFinalFile$$"
 
-
+    # check if one argument is passed in
     if [ "$#" -eq 1 ]
     then
         if [ -e $1 ]
         then
 
+            # read char by char to detect newlines and tabs
             while IFS= read -rN1 char
             do
                 #use newline to count rows
@@ -424,6 +470,7 @@ function mean(){
             fi
 
         else
+            # throw error when file is not readable
             echo "File named by argument 1 is not readable" 1>&2
             exit 1
         fi
@@ -431,6 +478,7 @@ function mean(){
     # if no argument is passed, read from stdin, functions as the same as the above
     elif [ "$#" -eq 0 ]
     then
+        # read char by char to detect newlines and tabs
         while IFS= read -rN1 char
         do
             #use newline to count rows
@@ -445,7 +493,8 @@ function mean(){
             fi
         done < /dev/stdin
 
-    columns=$(( $columns / $rows))
+        cols=$(( $cols / $rows))
+        ((cols++))
 
         flag=0
         j=0
@@ -572,8 +621,9 @@ function mean(){
             rm -f $transposefinalFile
         fi
     else
-    echo "Argument count is greater than 1" 1>&2
-    exit 1
+        #print error if argument count exceeds 1 as instructed in requirements
+        echo "Argument count is greater than 1" 1>&2
+        exit 1
     fi
 
 }
@@ -613,6 +663,7 @@ function add() {
         # check if both files are readable i.e exists to avoid read error
         if [[ -e $1 ]] && [[ -e $2 ]]
         then
+            # read char by char to detect newlines and tabs
             while IFS= read -rN1 char
             do
                 #use newline to count rows
@@ -628,6 +679,7 @@ function add() {
             done < $1
 
             # read char by char
+            # read char by char to detect newlines and tabs
             while IFS= read -rN1 char
             do
                 #use newline to count rows
@@ -775,6 +827,7 @@ function multiply() {
         # check if both files are readable i.e exists to avoid read error
         if [[ -e $1 ]] && [[ -e $2 ]]
         then
+            # read char by char to detect newlines and tabs
             while IFS= read -rN1 char
             do
                 #use newline to count rows
@@ -789,6 +842,7 @@ function multiply() {
                 fi
             done < $1
 
+            # read char by char to detect newlines and tabs
             while IFS= read -rN1 char
             do
                 #use newline to count rows
@@ -874,9 +928,10 @@ function multiply() {
 
             reset=0
 
-            # to satisfy the matrix multiplication rule
+            # to satisfy the matrix multiplication rule, make sure # of columns of left matrix matches # of rows of the right matrix
             if [[ $colsLeft -eq $rowsRight ]]
             then
+                # decrement column due to increment made for the conditional above
                 ((colsRight--))
                 reset=0
                 # read each field separated by tabs
@@ -909,6 +964,7 @@ function multiply() {
 
                     done 3<"$finalFile"
 
+                    # transpose row using newline and tabs as delimiters to transform column into a row
                     cat $sumArr | tr '\n' '\t' > $tempRow
                     truncate -s-1 $tempRow
                     printf "\n" >> "$tempRow"
@@ -948,6 +1004,7 @@ function multiply() {
             fi
 
         else
+            # throw error if one of the files or both are not readable
             echo "At least one of the files passed in is not readable" 1>&2
             exit 1
         fi
