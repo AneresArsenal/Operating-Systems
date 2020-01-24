@@ -6,10 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-
-
 void createRooms();
-
 
 struct stat st = {0};
 
@@ -23,8 +20,7 @@ struct stat st = {0};
 // Thus, for a given run of your rooms program, 7 of the 10 hard-coded room names will be used.
 
 char roomNames[10][9];
-
-
+// char *getcwd(char *buf, size_t size);
 
 int main(void)
 {
@@ -73,25 +69,43 @@ void createRooms()
 	strcpy(roomNames[9], "birch");
 
 	int file_descriptor;
-	char *directory = "./tays.rooms";
+	char *directory = "tays.rooms";
 
+	int j;
 
 	// create 10 files with hardcoded strings
 	for (i = 0; i < 10; i++)
 	{
 		// int res = sprintf(readBuffer, "test%s.txt", roomNames[i]);
 		char pathFile[50];
-		sprintf(pathFile, "%s.%s", directory, roomNames[i]);
-		// sprintf(pathFile, "%s.%s", directory, roomNames[i]);
-		printf("%s", pathFile);
+		memset(pathFile, '\0', 50);
 
-		// open(roomNames[i], O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+		// choose random room
+		j = -1;
 
+		// concatenate the current working directory path and file name
+		sprintf(pathFile, "/%s/%s.c", directory, roomNames[i]);
+
+		// char cwd[100];
+		// getcwd(cwd, sizeof(cwd));
+		// printf("Current working dir: %s\n", cwd);
+
+		// sprintf(pathFile, "%s/%s/%s.c", cwd, directory, roomNames[i]);
+		// printf("%s \n", pathFile);
+
+		open(pathFile, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	}
+}
 
+int randomRoom()
+{
+	int roomNums[8];
 
+	memset(roomNums, -1, 8);
 
+	
 
+	return j;
 }
 
 // Reference:
@@ -99,3 +113,4 @@ void createRooms()
 // https://www.geeksforgeeks.org/create-directoryfolder-cc-program/
 // https://stackoverflow.com/questions/1088622/how-do-i-create-an-array-of-strings-in-c
 // http://web.engr.oregonstate.edu/~brewsteb/CS344Slides/2.4%20File%20Access%20in%20C.pdf
+// https://stackoverflow.com/questions/298510/how-to-get-the-current-directory-in-a-c-program
