@@ -4,13 +4,15 @@
 
 struct stat st = {0};
 
-int main()
+int main(void)
 {
 
 	if (stat("/tays.rooms", &st) == -1)
 	{
 		mkdir("/tays.rooms", 0700);
 	}
+
+	return 0;
 }
 
 // Reference:
