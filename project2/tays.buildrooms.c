@@ -104,19 +104,11 @@ void createDir()
 
 	else
 	{
-		printf("Directory exists! Delete files in directory. \n");
-		// get current directory's file path
-		memset(cwd, '\0', maxchars);
-		getcwd(cwd, sizeof(cwd));
+		printf("Directory exists! Remove old directory. \n");
+		rmdir("tays.rooms");
+		mkdir("tays.rooms", 0700);
+		printf("Neww directory created! \n");
 
-
-
-		char directory[maxchars];
-		memset(directory, '\0', maxchars);
-		sprintf(directory, "%s/tays.room", cwd);
-
-
-		system("exec rm -r $s /*", directory);
 	}
 }
 
