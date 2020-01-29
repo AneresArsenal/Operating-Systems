@@ -96,16 +96,24 @@ int main(void)
 
 void createDir()
 {
+	// if the noted directory does not exist
 	if (stat("tays.rooms", &st) == -1)
 	{
 		mkdir("tays.rooms", 0700);
 		printf("Directory created! \n");
 	}
 
+// if the noted directory exist, remove old and create new one
 	else
 	{
 		printf("Directory exists! Remove old directory. \n");
+
+		// remove files in old directory
+		system("rm -rf tays.rooms/");
+		// remove old directory
 		rmdir("tays.rooms");
+
+		//create new one
 		mkdir("tays.rooms", 0700);
 		printf("Neww directory created! \n");
 
