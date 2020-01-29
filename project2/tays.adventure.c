@@ -11,17 +11,19 @@
 #define maxchars 100
 #define roomCount 7
 #define maxconnections 6
-char filePaths[roomCount+1][maxchars];
-char roomNames[roomCount+1][maxchars];
-char roomTypes[roomCount+1][maxchars];
-char roomConnections[roomCount+1][maxconnections+1][maxchars];
-char readFilePaths[roomCount+1][maxchars+1];
-char cwd[maxchars+1];
+char filePaths[roomCount + 1][maxchars];
+char roomNames[roomCount + 1][maxchars];
+char roomTypes[roomCount + 1][maxchars];
+char roomConnections[roomCount + 1][maxconnections + 1][maxchars];
+char readFilePaths[roomCount + 1][maxchars + 1];
+char cwd[maxchars + 1];
 char *getcwd(char *buf, size_t size);
-int roomCounts[roomCount+1];
+int roomCounts[roomCount + 1];
 
 void readFiles();
 void cleanLastRow();
+void writeFiles();
+void startGame();
 
 int main(void)
 {
@@ -49,6 +51,7 @@ int main(void)
 
 	readFiles();
 	cleanLastRow();
+	writeFiles();
 
 	// for (i = 0; i < roomCount; i++)
 	// {
@@ -157,20 +160,74 @@ void cleanLastRow()
 
 	for (i = 0; i < roomCount; i++)
 	{
-		// printf("%s \n", filePaths[i]);
-		// printf("Room %d name: %s \n", i, roomNames[i]);
-
-		printf("Room %d name: %s \n", i, roomNames[i]);
-
-		for (j = 0; j < roomCounts[i]; j++)
+		if (strcmp(roomTypes[i], "END_ROOM") == 0)
 		{
-			printf("Room Connection %d:%s \n", j, roomConnections[i][j]);
+			printf("Found starting room! Room %s: %s \n", roomNames[i], roomTypes[i]);
+		}
+	}
+
+	// for (i = 0; i < roomCount; i++)
+	// {
+	// 	if (strcmp(roomTypes[i],"END_ROOM"))
+	// 	{
+	// 		printf("Room %d name: %s \n", i, roomNames[i]);
+
+	// 		for (j = 0; j < roomCounts[i]; j++)
+	// 		{
+	// 			printf("Room Connection %d:%s \n", j, roomConnections[i][j]);
+	// 		}
+
+	// 		printf("Room %d type: %s \n", i, roomTypes[i]);
+	// 	}
+	// }
+}
+
+void writeFiles()
+{
+	int i, j;
+	int file_descriptor;
+	char room[maxchars];
+	char type[maxchars];
+	char path[maxchars];
+	char filePaths[roomCount][maxchars];
+	ssize_t nread, nwritten;
+	char readBuffer[2000];
+
+	// create files in directory
+	for (i = 0; i < roomCount; i++)
+	{
+		// reset char array
+		memset(path, '\0', maxchars);
+		sprintf(path, "%s/%d.c", cwd, i);
+		open(path, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+
+		memset(filePaths[i], '\0', maxchars);
+		sprintf(filePaths[i], "%s", path);
+	}
+
+	for (i = 0; i < roomCount; i++)
+	{
+
+		file_descriptor = open(filePaths[i], O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+
+		if (file_descriptor == -1)
+		{
+			printf("Hull breach - open() failed on \"%s\"\n", filePaths[i]);
+			exit(1);
 		}
 
-		printf("Room %d type: %s \n", i, roomTypes[i]);
+		sprintf(room, "%s %s \n", room, roomNames[i]);
+		nwritten = write(file_descriptor, room, strlen(room) * sizeof(char));
 
+		sprintf(type, "%s %s \n", type, roomTypes[i]);
+		nwritten = write(file_descriptor, type, strlen(type) * sizeof(char));
+
+		memset(readBuffer, '\0', sizeof(readBuffer)); // Clear out the array before using it
+		lseek(file_descriptor, 0, SEEK_SET);		  // Reset the file pointer to the beginning of the file
+		nread = read(file_descriptor, readBuffer, sizeof(readBuffer));
 	}
 }
+
 // Reference:
 // https://stackoverflow.com/questions/4204666/how-to-list-files-in-a-directory-in-a-c-program
 // https://stackoverflow.com/questions/2925241/how-to-open-a-text-file-thats-not-in-the-same-folder
