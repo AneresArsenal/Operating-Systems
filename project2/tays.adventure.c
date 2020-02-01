@@ -11,6 +11,7 @@
 #define maxchars 100
 #define roomCount 7
 #define maxconnections 6
+char dName[maxchars];
 char filePaths[roomCount + 1][maxchars];
 char roomNames[roomCount + 1][maxchars];
 char roomTypes[roomCount + 1][maxchars];
@@ -32,6 +33,7 @@ int stepCount;
 char pathHistory[maxchars][maxchars];
 
 void getLatestDir();
+void getFilePaths(char *str);
 void readFiles();
 void writeFiles();
 void startGame();
@@ -41,63 +43,41 @@ Bool checkInput(char *input, int current);
 void travelToRoom();
 void printRoom(int current);
 int getRoom(char *name);
+void printEnding();
 
 int main(void)
 {
 	int j, i;
 
-	DIR *d;
-	struct dirent *dir;
-	// d = opendir("./tays.rooms");
-	// if (d)
-	// {
-	// 	i = 0;
-	// 	while ((dir = readdir(d)) != NULL)
-	// 	{
-
-	// 		memset(filePaths[i], '\0', maxchars);
-
-	// 		if (dir->d_type == DT_REG)
-	// 		{
-	// 			strcpy(filePaths[i], dir->d_name);
-	// 			// printf("%s\n", dir->d_name);
-	// 			i++;
-	// 		}
-	// 	}
-	// 	closedir(d);
-	// }
-
 	getLatestDir();
+	getFilePaths(dName);
 
-	// readFiles();
-	// cleanRooms();
-	// findStartRoom();
+	readFiles();
+	cleanRooms();
+	findStartRoom();
 
-	// while (strcmp(roomTypes[currentRoom], "END_ROOM") != 0)
-	// {
-	// 	travelToRoom();
-	// }
+	while (strcmp(roomTypes[currentRoom], "END_ROOM") != 0)
+	{
+		travelToRoom();
+	}
 
-	// printf("YOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n");
-	// printf("YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS:\n", stepCount);
-	// for (i = 0; i <= stepCount; i++)
-	// {
-	// 	printf("%s\n", pathHistory[i]);
-	// }
+	printEnding();
 	return 0;
 }
 
 void getLatestDir()
 {
 	DIR *dirp = opendir(".");
+
 	struct dirent *dir;
-	struct stat dStat;
+	struct tm *time;
 	time_t latest = 0;
-	char dName[maxchars];
+
+	char timeConverted[maxchars];
 
 	while (((dir = readdir(dirp)) != NULL) && (dirp != NULL))
 	{
-		struct stat st;
+
 		// memset(dName, '\0', sizeof(dName));
 		if (strncmp(dir->d_name, "tays.rooms", strlen("tays.rooms")) != 0)
 		{
@@ -105,23 +85,58 @@ void getLatestDir()
 		}
 
 		else
-		{	
-			strcpy(dName, dir->d_name);
-			memset(&dStat, 0, sizeof(dStat));
+		{
+
+			struct stat dStat;
+			stat(dir->d_name, &dStat);
+
+			// printf("Current directory: %s\n", dir->d_name);
+			// printf("Last file modification:   %s", ctime(&dStat.st_mtime));
+			// printf("Pre Lastest time:   %s", ctime(&latest));
+
 			if (dStat.st_mtime > latest)
 			{
 				// On finding a more recent file switch that to latest
+				memset(dName, '\0', sizeof(dName));
 				strcpy(dName, dir->d_name);
 				latest = dStat.st_mtime;
+				// printf("Post Lastest time:   %s", ctime(&latest));
+				// printf("Newest directory: %s\n", dName);
 			}
+			memset(&dStat, 0, sizeof(dStat));
 		}
-		
 
 		// check with the latest timestamp
 	}
 
 	closedir(dirp);
 	printf("The most recently touched directory %s\n", dName);
+}
+
+void getFilePaths(char *str)
+{
+	int i;
+	DIR *d;
+	struct dirent *dir;
+
+	d = opendir(str);
+	if (d)
+	{
+		i = 0;
+		while ((dir = readdir(d)) != NULL)
+		{
+
+			memset(filePaths[i], '\0', maxchars);
+
+			if (dir->d_type == DT_REG)
+			{
+				strcpy(filePaths[i], dir->d_name);
+				// printf("File path %s saved! \n", filePaths[i]);
+				i++;
+			}
+		}
+		closedir(d);
+	}
 }
 void readFiles()
 {
@@ -149,7 +164,7 @@ void readFiles()
 	for (i = 0; i < roomCount; i++)
 	{
 
-		sprintf(readFilePaths[i], "%s/tays.rooms/%s", cwd, filePaths[i]);
+		sprintf(readFilePaths[i], "%s/%s/%s", cwd, dName, filePaths[i]);
 		// printf("%s\n", readFilePaths[i]);
 
 		file_descriptor = open(readFilePaths[i], O_RDWR);
@@ -352,44 +367,58 @@ int getRoom(char *name)
 	return -1;
 }
 
-void writeFiles()
+void printEnding()
 {
-	int i, j;
-	int file_descriptor;
-	char room[maxchars];
-	char type[maxchars];
-	char path[maxchars];
-	char filePaths[roomCount][maxchars];
-	ssize_t nread, nwritten;
-	char readBuffer[2000];
-
-	// create files in directory
-	for (i = 0; i < roomCount; i++)
+	int i;
+	printf("YOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n");
+	printf("YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS:\n", stepCount);
+	for (i = 0; i <= stepCount; i++)
 	{
-		// reset char array
-		memset(path, '\0', maxchars);
-		sprintf(path, "%s/%d.c", cwd, i);
-		file_descriptor = open(path, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-
-		memset(filePaths[i], '\0', maxchars);
-		sprintf(filePaths[i], "%s", path);
-
-		if (file_descriptor == -1)
-		{
-			printf("Hull breach - open() failed on \"%s\"\n", filePaths[i]);
-			exit(1);
+		printf("%s", pathHistory[i]);
+		if (i != stepCount){
+			printf("\n");
 		}
-
-		// sprintf(room, "%s", roomNames[i]);
-		// nwritten = write(file_descriptor, room, strlen(room) * sizeof(char));
-
-		sprintf(type, "%s", roomTypes[i]);
-		nwritten = write(file_descriptor, type, strlen(type) * sizeof(char));
-
-		memset(readBuffer, '\0', sizeof(readBuffer)); // Clear out the array before using it
-		lseek(file_descriptor, 0, SEEK_SET);		  // Reset the file pointer to the
 	}
 }
+
+// void writeFiles()
+// {
+// 	int i, j;
+// 	int file_descriptor;
+// 	char room[maxchars];
+// 	char type[maxchars];
+// 	char path[maxchars];
+// 	char filePaths[roomCount][maxchars];
+// 	ssize_t nread, nwritten;
+// 	char readBuffer[2000];
+
+// 	// create files in directory
+// 	for (i = 0; i < roomCount; i++)
+// 	{
+// 		// reset char array
+// 		memset(path, '\0', maxchars);
+// 		sprintf(path, "%s/%d.c", cwd, i);
+// 		file_descriptor = open(path, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+
+// 		memset(filePaths[i], '\0', maxchars);
+// 		sprintf(filePaths[i], "%s", path);
+
+// 		if (file_descriptor == -1)
+// 		{
+// 			printf("Hull breach - open() failed on \"%s\"\n", filePaths[i]);
+// 			exit(1);
+// 		}
+
+// 		// sprintf(room, "%s", roomNames[i]);
+// 		// nwritten = write(file_descriptor, room, strlen(room) * sizeof(char));
+
+// 		sprintf(type, "%s", roomTypes[i]);
+// 		nwritten = write(file_descriptor, type, strlen(type) * sizeof(char));
+
+// 		memset(readBuffer, '\0', sizeof(readBuffer)); // Clear out the array before using it
+// 		lseek(file_descriptor, 0, SEEK_SET);		  // Reset the file pointer to the
+// 	}
+// }
 
 // Reference:
 // https://stackoverflow.com/questions/4204666/how-to-list-files-in-a-directory-in-a-c-program
@@ -398,3 +427,5 @@ void writeFiles()
 // https://stackoverflow.com/questions/5711490/c-remove-the-first-character-of-an-array
 // https://stackoverflow.com/questions/20056587/trying-to-remove-the-last-character-in-a-char-array-in-c
 // https://stackoverflow.com/questions/23595397/use-of-regular-expressions-in-c-for-strcmp-function
+//https://stackoverflow.com/questions/10446526/get-last-modified-time-of-file-in-linux
+//https://stackoverflow.com/questions/26306644/how-to-display-st-atime-and-st-mtime/26307281
