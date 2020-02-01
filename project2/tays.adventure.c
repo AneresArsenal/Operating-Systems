@@ -95,32 +95,33 @@ void getLatestDir()
 	time_t latest = 0;
 	char dName[maxchars];
 
-	while ((dir = readdir(dirp)) != NULL)
+	while (((dir = readdir(dirp)) != NULL) && (dirp != NULL))
 	{
-		memset(&dStat, 0, sizeof(dStat));
-		if (stat(dir->d_name, &dStat) < 0)
-		{
-			printf("Error getting info on file\n");
-			continue;
-		}
-		// If not a directory skip
-		if ((dStat.st_mode & S_IFDIR) != S_IFDIR)
+		struct stat st;
+		// memset(dName, '\0', sizeof(dName));
+		if (strncmp(dir->d_name, "tays.rooms", strlen("tays.rooms")) != 0)
 		{
 			continue;
 		}
-		// check with the latest timestamp
-		if (dStat.st_mtime > latest)
-		{
-			// On finding a more recent file switch that to latest
+
+		else
+		{	
 			strcpy(dName, dir->d_name);
-			latest = dStat.st_mtime;
+			memset(&dStat, 0, sizeof(dStat));
+			if (dStat.st_mtime > latest)
+			{
+				// On finding a more recent file switch that to latest
+				strcpy(dName, dir->d_name);
+				latest = dStat.st_mtime;
+			}
 		}
+		
+
+		// check with the latest timestamp
 	}
 
-
-
 	closedir(dirp);
-	printf("Most recently touched directory %s\n", dName);
+	printf("The most recently touched directory %s\n", dName);
 }
 void readFiles()
 {
@@ -396,3 +397,4 @@ void writeFiles()
 // https://stackoverflow.com/questions/9206091/going-through-a-text-file-line-by-line-in-c
 // https://stackoverflow.com/questions/5711490/c-remove-the-first-character-of-an-array
 // https://stackoverflow.com/questions/20056587/trying-to-remove-the-last-character-in-a-char-array-in-c
+// https://stackoverflow.com/questions/23595397/use-of-regular-expressions-in-c-for-strcmp-function
