@@ -15,6 +15,8 @@
 #define maxconnections 6
 char pathFile[maxchars];
 char cwd[maxchars];
+char pid[10];
+char directory[maxchars];
 char roomNames[totalRooms][9];
 char roomTypes[typeCount][maxchars];
 char roomAssignedTypes[roomCount][maxchars];
@@ -59,6 +61,12 @@ int main(void)
 	srand(time(NULL));
 	int i, j;
 
+	// get parent process id
+
+	memset(pid, '\0', 10);
+	int pidNum = (int)getpid();
+	sprintf(pid, "%d", pidNum);
+
 	createDir();
 	createRooms();
 	assignRoomTypes();
@@ -97,26 +105,28 @@ int main(void)
 void createDir()
 {
 	// if the noted directory does not exist
-	if (stat("tays.rooms", &st) == -1)
+	memset(directory, '\0', sizeof(directory));
+	sprintf(directory, "tays.rooms.%s", pid);
+
+	if (stat(directory, &st) == -1)
 	{
-		mkdir("tays.rooms", 0700);
+		mkdir(directory, 0700);
 		printf("Directory created! \n");
 	}
 
-// if the noted directory exist, remove old and create new one
+	// if the noted directory exist, remove old and create new one
 	else
 	{
-		printf("Directory exists! Remove old directory. \n");
+		printf("Directory exists! Error! \n");
 
-		// remove files in old directory
-		system("rm -rf tays.rooms/");
-		// remove old directory
-		rmdir("tays.rooms");
+		// // remove files in old directory
+		// system("rm -rf tays.rooms/");
+		// // remove old directory
+		// rmdir("tays.rooms");
 
-		//create new one
-		mkdir("tays.rooms", 0700);
-		printf("Neww directory created! \n");
-
+		// //create new one
+		// mkdir("tays.rooms", 0700);
+		// printf("Neww directory created! \n");
 	}
 }
 
@@ -142,7 +152,7 @@ void createRooms()
 	strcpy(roomNames[9], "birch");
 
 	int file_descriptor;
-	char *directory = "tays.rooms";
+	char *directoryptr = directory;
 
 	int j;
 
@@ -153,17 +163,13 @@ void createRooms()
 	// get current directory's file path
 	memset(cwd, '\0', maxchars);
 	getcwd(cwd, sizeof(cwd));
-	// get parent process id
-	char pid[10];
-	memset(pid, '\0', 10);
-	int pidNum = (int)getppid();
-	sprintf(pid, "%d", pidNum);
+
 	// create files in directory
 	for (i = 0; i < roomCount; i++)
 	{
 		// reset char array
 		memset(pathFile, '\0', maxchars);
-		sprintf(pathFile, "%s/%s/%s.%s.c", cwd, directory, roomNames[roomNums[i]], pid);
+		sprintf(pathFile, "%s/%s/%s.%s.c", cwd, directoryptr, roomNames[roomNums[i]], pid);
 		open(pathFile, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 
 		memset(filePaths[i], '\0', maxchars);
@@ -273,7 +279,7 @@ void writeFiles()
 			exit(1);
 		}
 
-		sprintf(room, "%s %s \n", room, roomNames[roomNums[i]]);
+		sprintf(room, "%s %s\n", room, roomNames[roomNums[i]]);
 		nwritten = write(file_descriptor, room, strlen(room) * sizeof(char));
 
 		for (j = 0; j < maxconnections; j++)
@@ -282,13 +288,13 @@ void writeFiles()
 			{
 				break;
 			}
-			sprintf(connection, "%s %d: %s \n", connection, (j + 1), roomNames[roomNums[connections[i][j]]]);
+			sprintf(connection, "%s %d: %s\n", connection, (j + 1), roomNames[roomNums[connections[i][j]]]);
 			nwritten = write(file_descriptor, connection, strlen(connection) * sizeof(char));
 			memset(connection, '\0', maxchars);
 			sprintf(connection, "CONNECTION");
 		}
 
-		sprintf(type, "%s %s \n", type, roomAssignedTypes[i]);
+		sprintf(type, "%s %s\n", type, roomAssignedTypes[i]);
 		nwritten = write(file_descriptor, type, strlen(type) * sizeof(char));
 
 		memset(readBuffer, '\0', sizeof(readBuffer)); // Clear out the array before using it
