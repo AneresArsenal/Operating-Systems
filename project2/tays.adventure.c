@@ -7,10 +7,12 @@
 #include <string.h>
 #include <time.h>
 #include <dirent.h>
+#include <pthread.h>
 
 #define maxchars 100
 #define roomCount 7
 #define maxconnections 6
+char timeFilePath[maxchars];
 char dName[maxchars];
 char filePaths[roomCount + 1][maxchars];
 char roomNames[roomCount + 1][maxchars];
@@ -45,9 +47,30 @@ void printRoom(int current);
 int getRoom(char *name);
 void printEnding();
 
+// time thread functions
+int pthread_create(pthread_t *thread,
+				   const pthread_attr_t *attr,
+				   void *(*start_routine)(void *argv),
+				   void *arg);
+void *start_routine(void *parm);
+void *record_time(void *parm);
+pthread_mutex_t lock;
+pthread_t myThreadID;
+void printTime();
+
 int main(void)
 {
 	int j, i;
+
+	if (pthread_mutex_init(&lock, NULL) != 0)
+	{
+		printf("\n mutex init has failed\n");
+		return 1;
+	}
+
+	// get current directory's file path
+	memset(cwd, '\0', maxchars);
+	getcwd(cwd, sizeof(cwd));
 
 	getLatestDir();
 	getFilePaths(dName);
@@ -62,7 +85,9 @@ int main(void)
 	}
 
 	printEnding();
-	return 0;
+
+	pthread_mutex_destroy(&lock);
+	exit(EXIT_SUCCESS);
 }
 
 void getLatestDir()
@@ -145,10 +170,6 @@ void readFiles()
 	char line[maxchars];
 	ssize_t nread, nwritten;
 	char readBuffer[2000];
-
-	// get current directory's file path
-	memset(cwd, '\0', maxchars);
-	getcwd(cwd, sizeof(cwd));
 
 	// initialize all int arrays with -1
 	for (i = 0; i < roomCount; i++)
@@ -249,7 +270,19 @@ void findStartRoom()
 		fgets(input, maxchars, stdin);
 		indexOfNullTerminator = strlen(input);
 		input[indexOfNullTerminator - 1] = '\0';
-		flag = checkInput(input, currentRoom);
+		if (strcmp(input, "time") == 0)
+		{
+			pthread_mutex_unlock(&lock);
+			pthread_create(&myThreadID, NULL, start_routine, NULL);
+			pthread_join(myThreadID, NULL);
+			pthread_mutex_lock(&lock);
+			printTime();
+		}
+		else
+		{
+
+			flag = checkInput(input, currentRoom);
+		}
 	}
 
 	// printf("Correct input! %s \n", input);
@@ -298,7 +331,19 @@ void travelToRoom()
 		fgets(input, maxchars, stdin);
 		indexOfNullTerminator = strlen(input);
 		input[indexOfNullTerminator - 1] = '\0';
-		flag = checkInput(input, currentRoom);
+		if (strcmp(input, "time") == 0)
+		{
+			pthread_mutex_unlock(&lock);
+			pthread_create(&myThreadID, NULL, start_routine, NULL);
+			pthread_join(myThreadID, NULL);
+			pthread_mutex_lock(&lock);
+			printTime();
+		}
+		else
+		{
+
+			flag = checkInput(input, currentRoom);
+		}
 	}
 }
 
@@ -375,10 +420,90 @@ void printEnding()
 	for (i = 0; i <= stepCount; i++)
 	{
 		printf("%s", pathHistory[i]);
-		if (i != stepCount){
+		if (i != stepCount)
+		{
 			printf("\n");
 		}
 	}
+}
+
+void *start_routine(void *parm)
+{
+	pthread_mutex_lock(&lock);
+
+	int file_descriptor;
+	ssize_t nread, nwritten;
+	char readBuffer[2000];
+	FILE *file;
+
+	sprintf(timeFilePath, "%s/currentTime.txt", cwd);
+	file_descriptor = open(timeFilePath, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+	if (file_descriptor == -1)
+	{
+		printf("Hull breach - open() failed on \"%s\"\n", timeFilePath);
+		exit(1);
+	}
+
+	lseek(file_descriptor, 0, SEEK_SET);
+	file = fopen(timeFilePath, "w");
+
+	char outstr[maxchars];
+	char format[] = "%-I:%M%P, %A, %B %d, %Y"; // 1:03pm, Tuesday, September 13, 2016
+	time_t now = time(0);
+	struct tm *timeInfo;
+	timeInfo = localtime(&now);
+
+	// memset(format, '\0', sizeof(format));
+
+	if (timeInfo == NULL)
+	{
+		perror("localtime");
+		exit(EXIT_FAILURE);
+	}
+
+	if (strftime(outstr, sizeof(outstr), format, timeInfo) == 0)
+	{
+		fprintf(stderr, "strftime returned 0");
+		exit(EXIT_FAILURE);
+	}
+
+	// printf("Result string is %s \n", outstr);
+	nwritten = write(file_descriptor, outstr, strlen(outstr) * sizeof(char));
+	memset(outstr, '\0', maxchars);
+
+	// return NULL;
+	fclose(file);
+	pthread_mutex_unlock(&lock);
+	pthread_exit(NULL);
+}
+
+void printTime()
+{
+	int file_descriptor;
+	char line[maxchars];
+	ssize_t nread, nwritten;
+	char readBuffer[2000];
+	FILE *file;
+
+	sprintf(timeFilePath, "%s/currentTime.txt", cwd);
+	file_descriptor = open(timeFilePath, O_RDONLY, S_IRUSR | S_IWUSR);
+
+	if (file_descriptor == -1)
+	{
+		printf("Hull breach - open() failed on \"%s\"\n", timeFilePath);
+		exit(1);
+	}
+
+	lseek(file_descriptor, 0, SEEK_SET);
+	file = fopen(timeFilePath, "r");
+	printf("\n");
+	while (fgets(line, sizeof(line), file))
+	{
+		printf("%s\n", line);
+	}
+	printf("\n");
+	// return NULL;
+	fclose(file);
 }
 
 // void writeFiles()
@@ -427,5 +552,10 @@ void printEnding()
 // https://stackoverflow.com/questions/5711490/c-remove-the-first-character-of-an-array
 // https://stackoverflow.com/questions/20056587/trying-to-remove-the-last-character-in-a-char-array-in-c
 // https://stackoverflow.com/questions/23595397/use-of-regular-expressions-in-c-for-strcmp-function
-//https://stackoverflow.com/questions/10446526/get-last-modified-time-of-file-in-linux
-//https://stackoverflow.com/questions/26306644/how-to-display-st-atime-and-st-mtime/26307281
+// https://stackoverflow.com/questions/10446526/get-last-modified-time-of-file-in-linux
+// https://stackoverflow.com/questions/26306644/how-to-display-st-atime-and-st-mtime/26307281
+// https://stackoverflow.com/questions/26070059/c-control-reaches-end-of-non-void-function
+// https://stackoverflow.com/questions/6990888/c-how-to-create-thread-using-pthread-create-function
+// https://linux.die.net/man/3/strftime
+// https://www.geeksforgeeks.org/mutex-lock-for-linux-thread-synchronization/
+// https://www.programiz.com/python-programming/datetime/strftime

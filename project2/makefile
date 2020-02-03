@@ -1,6 +1,6 @@
 compile:
 		gcc -o tays.buildrooms tays.buildrooms.c
-		gcc -o tays.adventure tays.adventure.c
+		gcc -pthread -o tays.adventure tays.adventure.c
 
 runBuild:
 		tays.buildrooms

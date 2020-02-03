@@ -111,13 +111,13 @@ void createDir()
 	if (stat(directory, &st) == -1)
 	{
 		mkdir(directory, 0700);
-		printf("Directory created! \n");
+		// printf("Directory created! \n");
 	}
 
 	// if the noted directory exist, remove old and create new one
 	else
 	{
-		printf("Directory exists! Error! \n");
+		// printf("Directory exists! Error! \n");
 
 		// // remove files in old directory
 		// system("rm -rf tays.rooms/");
