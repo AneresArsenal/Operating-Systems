@@ -1,12 +1,14 @@
 // #include <sys/types.h>
 // #include <sys/stat.h>
 #include <unistd.h>
-// #include <fcntl.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <signal.h>
+// #include "child.c"
+
 // #include <time.h>
 // #include <dirent.h>
 // #include <pthread.h>
@@ -15,6 +17,7 @@
 #define maxchars 2048
 #define maxargs 512
 #define IDnums 10
+
 pid_t parent;
 pid_t ppids[100];
 int pidCount = 0;
@@ -28,10 +31,11 @@ struct userInput
 {
 	char command[maxchars];
 	char arguments[maxargs][maxchars];
+	int argCount;
 	int inputFlag;
-	char input[3][maxchars];
+	char input[1][maxchars];
 	int outputFlag;
-	char output[3][maxchars];
+	char output[1][maxchars];
 	int backgroundFlag;
 };
 
@@ -42,15 +46,15 @@ void checkStruct(struct userInput *currentInput);
 void exitCommand();
 void checkExitStatus();
 void runCommand(struct userInput *currentInput, int argCount);
+pid_t forkChild(struct userInput *currentInput);
+void checkPIDs();
+void runNonBuilt(struct userInput *currentInput);
 char input[maxchars];
 
 int main(void)
 {
 
-	// char result[maxchars];
-	// int parent = (int)getpid();
-	// int childExitMethod;
-
+	char result[maxchars];
 	int argCount, i;
 	struct userInput *currentInput;
 	currentInput = calloc(1, sizeof(struct userInput));
@@ -66,6 +70,8 @@ int main(void)
 
 	runCommand(currentInput, argCount);
 
+	// checkPIDs();
+
 	return 0;
 }
 
@@ -80,7 +86,7 @@ int getUserInput(struct userInput *currentInput)
 
 	memset(string, '\0', maxchars);
 	printf(": ");
-	// fflush(stdout);
+	fflush(stdout);
 	fgets(string, maxchars, stdin);
 
 	indexOfNullTerminator = strlen(string);
@@ -93,6 +99,7 @@ int getUserInput(struct userInput *currentInput)
 	if (strlen(string) == 0 || (string[0] == '#'))
 	{
 		printf("Blank line or comment found!\n");
+		fflush(stdout);
 		return -1;
 	}
 
@@ -113,16 +120,11 @@ int getUserInput(struct userInput *currentInput)
 
 	count = i - 1;
 
-	// for (i = 0; i < count; i++)
-	// {
-	// 	printf("Input %i: %s\n", i, inputs[i]);
-	// }
-
 	i = 0;
 	while ((strcmp(inputs[i], "<") != 0) && (strcmp(inputs[i], ">") != 0) && (strlen(inputs[i]) != 0))
 	{
 		strcpy(currentInput->arguments[i], inputs[i]);
-		// printf("Argument %i: %s\n", i, currentInput->arguments[i]);
+
 		i++;
 	}
 
@@ -136,25 +138,25 @@ int getUserInput(struct userInput *currentInput)
 
 		for (j = i; j < count; j++)
 		{
-			// printf("current position is %i\n",j);
 
 			if (strcmp(inputs[j], "<") == 0)
 			{
-				// printf("Found input! \n");
 				currentInput->inputFlag = 1;
 				// copy into input file array
-				strcpy(currentInput->input[0], inputs[j]);
-				strcpy(currentInput->input[1], inputs[j + 1]);
+				strcpy(currentInput->input[0], inputs[j + 1]);
 			}
 
 			// found output file arg
 			if (strcmp(inputs[j], ">") == 0)
 			{
-				// printf("Found output! \n");
 				currentInput->outputFlag = 1;
 				// copy into output file array
-				strcpy(currentInput->output[0], inputs[j]);
-				strcpy(currentInput->output[1], inputs[j + 1]);
+				strcpy(currentInput->output[0], inputs[j + 1]);
+			}
+
+			if (strcmp(inputs[j], "&") == 0)
+			{
+				currentInput->backgroundFlag = 1;
 			}
 		}
 	}
@@ -169,37 +171,14 @@ int getUserInput(struct userInput *currentInput)
 		count = count - 2;
 	}
 
-	return count;
-}
-
-void checkStruct(struct userInput *currentInput)
-{
-
-	printf("Command is: %s\n", currentInput->command);
-
-	int i = 0;
-
-	while (strlen(currentInput->arguments[i]) != 0)
-	{
-		printf("Argument %i: %s\n", i, currentInput->arguments[i]);
-		i++;
-	}
-
-	if (currentInput->inputFlag == 1)
-	{
-		for (i = 0; i < 2; i++)
-		{
-			printf("Input array item %i: %s\n", i, currentInput->input[i]);
-		}
-	}
-
 	if (currentInput->outputFlag == 1)
 	{
-		for (i = 0; i < 2; i++)
-		{
-			printf("Output array item %i: %s\n", i, currentInput->output[i]);
-		}
+		count--;
 	}
+
+	currentInput->argCount = count;
+
+	return count;
 }
 
 void runCommand(struct userInput *currentInput, int argCount)
@@ -224,7 +203,7 @@ void runCommand(struct userInput *currentInput, int argCount)
 		char pathway[maxchars];
 		memset(cwd, '\0', maxchars);
 		getcwd(cwd, sizeof(cwd));
-		// printf("Pre-call cwd: %s\n", cwd);
+		printf("Pre-call cwd: %s\n", cwd);
 
 		if (argCount > 1)
 		{
@@ -248,7 +227,7 @@ void runCommand(struct userInput *currentInput, int argCount)
 		chdir("..");
 		chdir(pathway);
 		getcwd(cwd, sizeof(cwd));
-		// printf("Post-call cwd: %s\n", cwd);
+		printf("Post-call cwd: %s\n", cwd);
 	}
 
 	else if (strcmp(currentInput->command, "status") == 0)
@@ -279,139 +258,52 @@ void runCommand(struct userInput *currentInput, int argCount)
 	}
 	else
 	{
-		int size = argCount;
-		if (currentInput->inputFlag == 1)
-		{
-			size = size + 2;
-		}
-		if (currentInput->outputFlag == 1)
-		{
-			size = size + 2;
-		}
-
-		// no args
-		if (size == 0)
-		{
-			execlp(currentInput->command, currentInput->command, NULL);
-		}
-
-		// only output and/or input
-		else if (argCount == 0 && size > 0)
-		{
-			// printf("no arg count but flag detected \n.");
-			char args[size + 1][maxchars];
-			int j = 0;
-
-			if (currentInput->inputFlag == 1)
-			{
-				memset(args[j], '\0', maxchars);
-				memset(args[j + 1], '\0', maxchars);
-
-				strcpy(args[j], currentInput->input[0]);
-				strcpy(args[j + 1], currentInput->input[1]);
-				j = j + 2;
-			}
-
-			if (currentInput->outputFlag == 1)
-			{
-				memset(args[j], '\0', maxchars);
-				memset(args[j + 1], '\0', maxchars);
-
-				strcpy(args[j], currentInput->output[0]);
-				strcpy(args[j + 1], currentInput->output[1]);
-				j = j + 2;
-			}
-
-			memset(args[j], '\0', maxchars);
-			sprintf(args[j], NULL);
-			execlp(currentInput->command, currentInput->command, args);
-		}
-
-		else
-		{
-			// printf("Size is %i \n", size);
-			// printf("Argcount is %i \n", argCount);
-
-			char args[size + 1][maxchars];
-			int j = 0;
-
-			for (j = 0; j < argCount; j++)
-			{
-				memset(args[j], '\0', maxchars);
-				strcpy(args[j], currentInput->arguments[j]);
-				j++;
-			}
-
-			// checkStruct(currentInput);
-			sprintf(args[j], NULL);
-			execlp(currentInput->command, currentInput->command, args);
-
-			// if (currentInput->inputFlag == 1)
-			// {
-
-			// 	memset(args[j], '\0', maxchars);
-			// 	memset(args[j + 1], '\0', maxchars);
-
-			// 	strcpy(args[j], currentInput->input[0]);
-			// 	strcpy(args[j + 1], currentInput->input[1]);
-			// 	j = j + 2;
-			// }
-
-			// if (currentInput->outputFlag == 1)
-			// {
-			// 	memset(args[j], '\0', maxchars);
-			// 	memset(args[j + 1], '\0', maxchars);
-
-			// 	strcpy(args[j], currentInput->output[0]);
-			// 	strcpy(args[j + 1], currentInput->output[1]);
-			// 	j = j + 2;
-			// }
-
-			// memset(args[j], '\0', maxchars);
-			// sprintf(args[j], NULL);
-			// execlp(currentInput->command, currentInput->command, args);
-		}
+		runNonBuilt(currentInput);
+		//forkChild(currentInput);
 	}
-	// 	int size = argCount + 1;
-	// 	if (currentInput->inputFlag == 1)
-	// 	{
-	// 		size = size + 2;
-	// 	}
-	// 	if (currentInput->outputFlag == 1)
-	// 	{
-	// 		size = size + 2;
-	// 	}
+}
 
-	// 	char args[size][maxchars];
-	// 	int i, j = 0;
+pid_t forkChild(struct userInput *currentInput)
+{
+	pid_t spawnPid = -5;
+	int childExitMethod = -5;
+	int childExitStatus = -5;
+	spawnPid = fork();
 
-	// 	for (i = 0; i < argCount; i++)
-	// 	{
-	// 		memset(args[i], '\0', maxchars);
-	// 		strcpy(args[i], currentInput->arguments[i]);
-	// 		j++;
-	// 	}
-
-	// 	if (currentInput->inputFlag == 1)
-	// 	{
-
-	// 		strcpy(args[j], currentInput->input[0]);
-	// 		strcpy(args[j + 1], currentInput->input[1]);
-	// 		j = j + 2;
-	// 	}
-
-	// 	if (currentInput->outputFlag == 1)
-	// 	{
-
-	// 		strcpy(args[j], currentInput->output[0]);
-	// 		strcpy(args[j + 1], currentInput->output[1]);
-	// 		j = j + 2;
-	// 	}
-
-	// 	sprintf(args[j], NULL);
-
-	// 	execlp(currentInput->command, currentInput->command, args);
-	// }
+	switch (spawnPid)
+	{
+	case -1:
+	{
+		perror("Hull Breach!\n");
+		exit(1);
+		break;
+	}
+	case 0:
+	{
+		// printf("CHILD(%d): Sleeping for 1 second\n", getpid());
+		// sleep(1);
+		// printf("CHILD(%d): Converting into \'ls -a\'\n", getpid());
+		// execlp("ls", "ls", "-a", NULL);
+		runNonBuilt(currentInput);
+		perror("CHILD: exec failure!\n");
+		exit(2);
+		break;
+	}
+	default:
+	{
+		// printf("PARENT(%d): Sleeping for 2 seconds\n", getpid());
+		// sleep(2);
+		// printf("PARENT(%d): Wait()ing for child(%d) to terminate\n", getpid(), spawnPid);
+		pid_t actualPid = waitpid(spawnPid, &childExitStatus, 0);
+		// printf("PARENT(%d): Child(%d) terminated, Exiting!\n", getpid(), actualPid);
+		parent = getpid();
+		ppids[pidCount] = spawnPid;
+		pidCount++;
+		return spawnPid;
+		// exit(0);
+		// break;
+	}
+	}
 }
 
 void exitCommand()
@@ -452,6 +344,155 @@ void checkExitStatus(pid_t pid)
 		int termSignal = WTERMSIG(childExitMethod);
 		printf("Child terminated by signal > %i\n", termSignal);
 		fflush(stdout);
+	}
+}
+
+void checkStruct(struct userInput *currentInput)
+{
+
+	printf("Command is: %s\n", currentInput->command);
+
+	int i = 0;
+
+	printf("Arg count is: %i\n", currentInput->argCount);
+	while (i < currentInput->argCount)
+	{
+		printf("Argument %i: %s\n", i, currentInput->arguments[i]);
+		i++;
+	}
+
+	if (currentInput->inputFlag == 1)
+	{
+		printf("Input array item: %s\n", currentInput->input[0]);
+	}
+
+	if (currentInput->outputFlag == 1)
+	{
+		printf("Output array item: %s\n", currentInput->output[0]);
+	}
+}
+
+void runNonBuilt(struct userInput *currentInput)
+{
+	int size = currentInput->argCount;
+	int sourceFD, targetFD, result;
+	// printf("in non-Built!\n");
+	// checkStruct(currentInput);
+
+	// no args
+	if (size == 0)
+	{
+		execvp(currentInput->command, NULL);
+	}
+
+	// only output and/or input
+	else if (currentInput->argCount == 0)
+	{
+		// printf("no arg count but flag detected \n.");
+
+		if (currentInput->inputFlag == 1)
+		{
+			sourceFD = open(currentInput->input[0], O_RDONLY);
+			if (sourceFD == -1)
+			{
+				perror("source open()");
+				exit(1);
+			}
+			printf("sourceFD == %d\n", sourceFD); // Written to terminal
+
+			result = dup2(sourceFD, 0);
+			if (result == -1)
+			{
+				perror("source dup2()");
+				exit(2);
+			}
+		}
+
+		if (currentInput->outputFlag == 1)
+		{
+			targetFD = open(currentInput->output[0], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+			if (targetFD == -1)
+			{
+				perror("source open()");
+				exit(1);
+			}
+			printf("targetFD == %d\n", targetFD); // Written to terminal
+
+			result = dup2(targetFD, 1);
+			if (result == -1)
+			{
+				perror("target dup2()");
+				exit(2);
+			}
+		}
+
+		execvp(currentInput->command, NULL);
+	}
+
+	// contains arguments and flags
+	else
+	{
+		if (currentInput->inputFlag == 1)
+		{
+			printf("Input flag found \n");
+			sourceFD = open(currentInput->input[0], O_RDONLY);
+			if (sourceFD == -1)
+			{
+				perror("source open()");
+				exit(1);
+			}
+			printf("sourceFD == %d\n", sourceFD); // Written to terminal
+
+			result = dup2(sourceFD, 0);
+			if (result == -1)
+			{
+				perror("source dup2()");
+				exit(2);
+			}
+		}
+
+		if (currentInput->outputFlag == 1)
+		{
+			printf("Output flag found \n");
+			targetFD = open(currentInput->output[0], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+			if (targetFD == -1)
+			{
+				perror("source open()");
+				exit(1);
+			}
+			printf("targetFD == %d\n", targetFD); // Written to terminal
+
+			result = dup2(targetFD, 1);
+			if (result == -1)
+			{
+				perror("target dup2()");
+				exit(2);
+			}
+		}
+
+		// char (*arguments)[maxargs][maxchars] = &currentInput->arguments;
+
+		char *argv[currentInput->argCount + 1];
+		int i;
+		for (i = 0; i < currentInput->argCount; i++)
+		{
+			memcpy(argv[i], currentInput->arguments[i], strlen(currentInput->arguments[i]));
+		}
+		memset(argv[currentInput->argCount], '\0', sizeof(char));
+
+		execvp(currentInput->command, argv);
+	}
+}
+
+void checkPIDs()
+{
+	int i;
+
+	printf("Current parent is %d\n", parent);
+
+	for (i = 0; i < pidCount; i++)
+	{
+		printf("Child %i is %d\n", i + 1, ppids[i]);
 	}
 }
 
