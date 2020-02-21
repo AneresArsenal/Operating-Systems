@@ -19,7 +19,7 @@
 #define IDnums 10
 
 pid_t parent;
-pid_t lastFG;
+pid_t lastFG = -99;
 int lastFGExitStatus = 0;
 pid_t bgPIDs[100];
 int pidCount = 0;
@@ -74,28 +74,15 @@ void CATCHsigchild(int signal)
 	{
 		removePID(statusID);
 	}
-}
 
-/**********************************************************************************/
-/********************************* sigint ****************************************/
-/**********************************************************************************/
-
-void CATCHsigint(int signal)
-{
-	int fgChildExitMethod = -5;
-	pid_t pid = lastFG;
-	pid_t statusID = waitpid(pid, &lastFGExitStatus, 0);
-
-	if (!WIFEXITED(fgChildExitMethod)) //still running
-	{
-		kill(pid, SIGKILL);
-	}
+	// write(STDOUT_FILENO, "\n: ", 2);
 }
 
 void removePID(pid_t pid)
 {
 	int i, j;
-	// checkPIDs();
+
+	printf("Background pid %d is completed \n", pid);
 
 	for (i = 0; i < pidCount; i++)
 	{
@@ -104,8 +91,6 @@ void removePID(pid_t pid)
 			break;
 		}
 	}
-
-	// printf("pid found at index %i \n", i);
 
 	for (j = i; j < pidCount; j++)
 	{
@@ -117,34 +102,53 @@ void removePID(pid_t pid)
 
 	bgPIDs[pidCount - 1] = 0;
 	pidCount--;
-
-	// checkPIDs();
 }
 
 /**********************************************************************************/
 /********************************* sigint ****************************************/
 /**********************************************************************************/
 
+void CATCHsigint(int signal)
+{
+	int fgChildExitMethod = -5;
+	if (lastFG != -99)
+	{
+		waitpid(lastFG, &lastFGExitStatus, 0);
+	}
+	else
+	{
+		write(STDOUT_FILENO, ": ", 2);
+	}
+}
+
+/**********************************************************************************/
+/********************************* sigtstp ****************************************/
+/**********************************************************************************/
+
 void CATCHsigtstp(int signal)
 {
 	int fgChildExitMethod = -5;
-	pid_t pid = lastFG;
-	// pid_t statusID = waitpid(pid, &lastFGExitStatus, 0);
+	if (lastFG != -99)
+	{
+		waitpid(lastFG, &lastFGExitStatus, 0);
+	}
 
-	// if (!WIFEXITED(fgChildExitMethod)) //still running
-	// {
-	// 	kill(pid, SIGKILL);
-	// }
-	// if (fgModeFlag == 0)
-	// {
-	// 	write(STDOUT_FILENO, "Entering foreground-only mode \n", 40);
-	// 	fgModeFlag = 1;
-	// }
+	if (fgModeFlag == 0)
+	{
+		fgModeFlag = 1;
+		write(STDOUT_FILENO, "Entering foreground-only mode.\n", 31);
+	}
 
-	// else
+	else
+	{
+		fgModeFlag = 0;
+		write(STDOUT_FILENO, "Exiting foreground-only mode.\n", 31);
+	}
+
+	write(STDOUT_FILENO, "\n: ", 3);
+	// if (lastFG == -99)
 	// {
-	// 	fgModeFlag = 0;
-	// 	write(STDOUT_FILENO, "Exiting foreground-only mode \n", 40);
+	// 	write(STDOUT_FILENO, ": ", 2);
 	// }
 }
 
@@ -171,7 +175,7 @@ int main(void)
 	SIGTSTP_action.sa_handler = CATCHsigtstp;
 	sigfillset(&SIGTSTP_action.sa_mask);
 	SIGTSTP_action.sa_flags = SA_RESTART;
-	sigaction(SIGCHLD, &SIGTSTP_action, NULL);
+	sigaction(SIGTSTP, &SIGTSTP_action, NULL);
 
 	char result[maxchars];
 	int argCount, i;
@@ -402,6 +406,7 @@ void runCommand(struct userInput *currentInput, int argCount)
 		if (argCount - 1 == 0)
 		{
 			exitCommand();
+			exit(0);
 		}
 
 		else
@@ -416,7 +421,7 @@ void runCommand(struct userInput *currentInput, int argCount)
 		char pathway[maxchars];
 		memset(cwd, '\0', maxchars);
 		getcwd(cwd, sizeof(cwd));
-		printf("Pre-call cwd: %s\n", cwd);
+		// printf("Pre-call cwd: %s\n", cwd);
 		fflush(stdout);
 
 		if (argCount - 1 > 1)
@@ -437,23 +442,20 @@ void runCommand(struct userInput *currentInput, int argCount)
 			strcpy(pathway, currentInput->arguments[1]);
 		}
 
-		chdir("..");
-		chdir(pathway);
-		getcwd(cwd, sizeof(cwd));
-		printf("Post-call cwd: %s\n", cwd);
-		fflush(stdout);
+		if (chdir(pathway) == -1)
+		{
+			fprintf(stderr, "Cannot find %s\n", pathway);
+		}
 	}
 
 	else if (strcmp(currentInput->command, "status") == 0)
 	{
 		if (argCount - 1 == 0)
 		{
-			pid_t lastPid = lastFG;
-
-			if (lastPid != 0)
+			if (lastFG != 0)
 			{
-				printf("Last foreground process is %i\n", lastPid);
-				fflush(stdout);
+				// printf("Last foreground process is %i\n", lastPid);
+				// fflush(stdout);
 				checkExitStatus(lastFGExitStatus);
 			}
 
@@ -484,93 +486,73 @@ void runCommand(struct userInput *currentInput, int argCount)
 void runNonBuilt(struct userInput *currentInput)
 {
 	int argCount = currentInput->argCount;
-	int sourceFD, targetFD, result, errorflag;
+	int sourceFD, targetFD, result, errorflag = 0;
+
+	if (currentInput->backgroundFlag == 1 && fgModeFlag == 0) //block when in background mode
+	{
+		struct sigaction blockSigInt = {{0}};
+		blockSigInt.sa_handler = SIG_IGN;
+		sigaction(SIGINT, &blockSigInt, NULL);
+	}
+
+	// block in both foreground and background
+	// struct sigaction blockSigTSTP = {{0}};
+	// blockSigTSTP.sa_handler = SIG_IGN;
+	// sigaction(SIGTSTP, &blockSigTSTP, NULL);
+
+	if (currentInput->inputFlag == 1)
+	{
+		if (currentInput->backgroundFlag == 1 && fgModeFlag == 0) //background process
+		{
+			ioRedirect(0, "/dev/null", O_RDONLY, 0);
+		}
+
+		else
+		{
+			ioRedirect(0, currentInput->input[0], O_RDONLY, 0);
+		}
+	}
+
+	if (currentInput->outputFlag == 1)
+	{
+		if (currentInput->backgroundFlag == 1 && fgModeFlag == 0) //background process
+		{
+			ioRedirect(1, "/dev/null", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+		}
+		else
+		{
+			ioRedirect(1, currentInput->output[0], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+		}
+	}
+
+	if (currentInput->backgroundFlag == 1  && fgModeFlag == 0) //background process
+	{
+		ioRedirect(1, "/dev/null", O_WRONLY, 0);
+	}
 
 	// no args
 	if (argCount == 0 && currentInput->inputFlag == 0 && currentInput->outputFlag == 0)
 	{
 		// printf("No arguments and flags \n.");
-		errorflag = execlp(currentInput->command, currentInput->command, NULL);
+		errorflag = execlp(currentInput->arguments[0], currentInput->arguments[0], NULL);
 	}
 
 	// only output and/or input
 	else if (argCount == 0)
 	{
 		// printf("no arg count but flag detected \n.");
-
-		if (currentInput->inputFlag == 1)
-		{
-			if (currentInput->backgroundFlag == 1) //background process
-			{
-				ioRedirect(0, "/dev/null", O_RDONLY, 0);
-			}
-
-			else
-			{
-				ioRedirect(0, currentInput->input[0], O_RDONLY, 0);
-			}
-		}
-
-		if (currentInput->outputFlag == 1)
-		{
-			if (currentInput->backgroundFlag == 1) //background process
-			{
-				ioRedirect(1, "/dev/null", O_WRONLY | O_CREAT | O_TRUNC, 0644);
-			}
-			else
-			{
-				ioRedirect(1, currentInput->output[0], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-			}
-		}
-
-		if (currentInput->backgroundFlag == 1) //background process
-		{
-			ioRedirect(1, "/dev/null", O_WRONLY, 0);
-		}
-
-		errorflag = execlp(currentInput->command, currentInput->command, NULL);
+		errorflag = execlp(currentInput->arguments[0], currentInput->arguments[0], NULL);
 	}
 
-	// contains arguments and flags
+	// contains arguments and/or flags
 	else
 	{
-		if (currentInput->inputFlag == 1)
-		{
-			if (currentInput->backgroundFlag == 1) //background process
-			{
-
-				ioRedirect(0, "/dev/null", O_RDONLY, 0);
-			}
-
-			else
-			{
-				ioRedirect(0, currentInput->input[0], O_RDONLY, 0);
-			}
-		}
-
-		if (currentInput->outputFlag == 1)
-		{
-			if (currentInput->backgroundFlag == 1) //background process
-			{
-				ioRedirect(1, "/dev/null", O_WRONLY | O_CREAT | O_TRUNC, 0644);
-			}
-			else
-			{
-				ioRedirect(1, currentInput->output[0], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-			}
-		}
-
-		if (currentInput->backgroundFlag == 1) //background process
-		{
-			ioRedirect(1, "/dev/null", O_WRONLY, 0);
-		}
-
 		errorflag = execvp(currentInput->arguments[0], currentInput->arguments);
 	}
 
 	if (errorflag == -1)
 	{
-		printf("Exec error, exit with status 1.\n");
+		printf("Exec error detected.\n");
 		exit(1);
 	}
 }
@@ -602,38 +584,25 @@ pid_t forkChild(struct userInput *currentInput)
 	{
 
 		// foreground process
-		if (currentInput->backgroundFlag != 1)
+		if (currentInput->backgroundFlag == 0 || fgModeFlag == 1)
 		{
-			printf("Executing foreground process %d\n", spawnPid);
-			fflush(stdout);
+			// printf("Executing foreground process %d\n", spawnPid);
+			// fflush(stdout);
+
 			lastFG = spawnPid;
 			pid_t actualPid = waitpid(spawnPid, &lastFGExitStatus, 0);
-			// if (WIFSIGNALED(lastFGExitStatus))
-			// {
-			// 	checkExitStatus(lastFGExitStatus);
-			// }
 		}
 
-		// background process
+		// background process or non fg-mode
 		else
 		{
 			parent = getpid();
-
-			printf("Executing background process %d\n", spawnPid);
+			// printf("Executing background process %d\n", spawnPid);
 			// only add background processes to the array
 			bgPIDs[pidCount] = spawnPid;
 			pidCount++;
 			waitpid(spawnPid, &bgChildExitMethod, WNOHANG);
-			// if (WIFSIGNALED(bgChildExitMethod))
-			// {
-			// 	checkExitStatus(bgChildExitMethod);
-			// }
 		}
-
-		// printf("PARENT(%d): Child(%d) terminated, Exiting!\n", getpid(), actualPid);
-
-		// exit(0);
-		// break;
 	}
 	}
 	return spawnPid;
@@ -671,6 +640,7 @@ void checkExitStatus(int exitStatus)
 	if (WIFEXITED(exitStatus))
 	{
 		int exitStat = WEXITSTATUS(exitStatus);
+
 		printf("Process %d exited with exit status %d\n", lastFG, exitStat);
 		fflush(stdout);
 	}
@@ -695,9 +665,6 @@ void exitCommand()
 	{
 		kill(bgPIDs[i], SIGKILL);
 	}
-
-	// kill parent
-	kill(parent, SIGKILL);
 }
 
 void checkStruct(struct userInput *currentInput)
@@ -824,3 +791,4 @@ void ioRedirect(int inputOrOutput, char *filePath, int flag, mode_t mode)
 // https://www.geeksforgeeks.org/write-a-c-program-that-doesnt-terminate-when-ctrlc-is-pressed/
 // https://stackoverflow.com/questions/1242974/write-to-stdout-and-printf-output-not-interleaved
 // https://stackoverflow.com/questions/14573000/print-int-from-signal-handler-using-write-or-async-safe-functions/52111436
+// https://stackoverflow.com/questions/12953350/ignore-sigint-signal-in-child-process

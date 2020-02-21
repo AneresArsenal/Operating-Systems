@@ -41,6 +41,7 @@ echo
 echo --------------------
 echo test -f badfile (10 points for returning error value of 1, note extraneous &)
 test -f badfile
+status &
 echo
 echo
 echo --------------------
