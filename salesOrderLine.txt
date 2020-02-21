@@ -1,0 +1,43 @@
+
+' This script contains functions for form and field events.
+' You must not modify the name of the functions.
+Option Explicit
+
+
+Dim dataSource, userId, password, database, sSQLConnectionString
+
+'Set the database variables
+dataSource = "167.114.201.168" 'sql server"
+userId = "sa" 'SQL User
+password = "67dart" 'SQL User Password
+database = "SysproOutdoors"
+
+sSQLConnectionString = "Provider=SQLOLEDB;Data Source=" & dataSource & ";Initial Catalog=" & database & ";Persist Security Info=False;User ID=" & userId & ";Password=" & password & ";"
+
+
+Function EnteredOrderLines_OnPopulate()
+
+Dim i, currentStockCode, count
+
+count = 0
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'Iterate the entered stock lines grid
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+for i = 0 to UBOUND(EnteredOrderLines.CodeObject.Array,2)-1
+
+	currentStockCode = EnteredOrderLines.CodeObject.Array(001,i)
+
+	if(StockedLine.CodeObject.StockCode = currentStockCode) then
+		count = count + 1
+	end if
+
+Next
+
+	if count > 1 then
+		msgbox("Error! Stock code "& currentStockCode &" entered in sales order twice.")
+	elseif count = 1 then
+		msgbox("Please note that currently selected stock code "& currentStockCode &" has been entered in sales order.")
+	end if		
+
+End Function
