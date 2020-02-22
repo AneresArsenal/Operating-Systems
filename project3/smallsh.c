@@ -54,8 +54,8 @@ void checkExitStatus(int exitstatus);
 void CATCHsigchild(int signal);
 void removePID(pid_t pid);
 void runCommand(struct userInput *currentInput, int argCount);
-pid_t forkChild(struct userInput *currentInput);
-
+void forkChild(struct userInput *currentInput);
+void checkBGPIDs();
 void checkPIDs();
 void runNonBuilt(struct userInput *currentInput);
 void ioRedirect(int inputOrOutput, char *filePath, int flag, mode_t mode);
@@ -67,13 +67,19 @@ char input[maxchars];
 
 void CATCHsigchild(int signal)
 {
-	int bgChildExitMethod = -5;
-	pid_t statusID = waitpid(-1, &bgChildExitMethod, WNOHANG);
+	// int bgChildExitMethod = -5;
+	// pid_t spawnid = waitpid(-1, &bgChildExitMethod, WNOHANG);
 
-	if (statusID > 0 && WIFEXITED(bgChildExitMethod))
-	{
-		removePID(statusID);
-	}
+	// if (spawnid > 0)
+	// {
+	// 	checkExitStatus(bgChildExitMethod);
+	// 	removePID(spawnid);
+	// }
+
+	// else if (WIFSIGNALED(bgChildExitMethod))
+	// {
+	// 	checkExitStatus(bgChildExitMethod);
+	// }
 
 	// write(STDOUT_FILENO, "\n: ", 2);
 }
@@ -82,7 +88,7 @@ void removePID(pid_t pid)
 {
 	int i, j;
 
-	printf("Background pid %d is completed \n", pid);
+	// write(STDOUT_FILENO, "\nBackground process is terminated.\n", 35);
 
 	for (i = 0; i < pidCount; i++)
 	{
@@ -162,10 +168,10 @@ int main(void)
 	struct sigaction SIGINT_action = {{0}};
 	struct sigaction SIGTSTP_action = {{0}};
 
-	SIGCHLD_action.sa_handler = CATCHsigchild;
-	sigfillset(&SIGCHLD_action.sa_mask);
-	SIGCHLD_action.sa_flags = SA_RESTART;
-	sigaction(SIGCHLD, &SIGCHLD_action, NULL);
+	// SIGCHLD_action.sa_handler = CATCHsigchild;
+	// sigfillset(&SIGCHLD_action.sa_mask);
+	// SIGCHLD_action.sa_flags = SA_RESTART;
+	// sigaction(SIGCHLD, &SIGCHLD_action, NULL);
 
 	SIGINT_action.sa_handler = CATCHsigint;
 	sigfillset(&SIGINT_action.sa_mask);
@@ -209,6 +215,7 @@ int main(void)
 		// printf("After command has ran:\n");
 		// fflush(stdout);
 		// checkStruct(currentInput);
+		checkBGPIDs();
 		resetStruct(currentInput);
 	}
 
@@ -271,7 +278,7 @@ int getUserInput(struct userInput *currentInput)
 	count = i;
 
 	i = 0;
-	while ((strcmp(inputs[i], "&") != 0) && (strcmp(inputs[i], "<") != 0) && (strcmp(inputs[i], ">") != 0) && (strlen(inputs[i]) != 0))
+	while (((strcmp(inputs[i], "&") != 0) || i < count - 1) && (strcmp(inputs[i], "<") != 0) && (strcmp(inputs[i], ">") != 0) && (strlen(inputs[i]) != 0))
 	{
 		char *finalStr = checkExpansion(inputs[i]);
 
@@ -306,7 +313,7 @@ int getUserInput(struct userInput *currentInput)
 				strcpy(currentInput->output[0], inputs[j + 1]);
 			}
 
-			if (strcmp(inputs[j], "&") == 0)
+			if ((strcmp(inputs[j], "&") == 0) && j == count-1) //only take & that is placed last
 			{
 				currentInput->backgroundFlag = 1;
 			}
@@ -525,7 +532,7 @@ void runNonBuilt(struct userInput *currentInput)
 		}
 	}
 
-	if (currentInput->backgroundFlag == 1  && fgModeFlag == 0) //background process
+	if (currentInput->backgroundFlag == 1 && fgModeFlag == 0) //background process
 	{
 		ioRedirect(1, "/dev/null", O_WRONLY, 0);
 	}
@@ -561,7 +568,7 @@ void runNonBuilt(struct userInput *currentInput)
 /********************************* forkChild **************************************/
 /**********************************************************************************/
 
-pid_t forkChild(struct userInput *currentInput)
+void forkChild(struct userInput *currentInput)
 {
 	pid_t spawnPid = -5, statusID;
 	int bgChildExitMethod = -5;
@@ -590,14 +597,15 @@ pid_t forkChild(struct userInput *currentInput)
 			// fflush(stdout);
 
 			lastFG = spawnPid;
-			pid_t actualPid = waitpid(spawnPid, &lastFGExitStatus, 0);
+			waitpid(spawnPid, &lastFGExitStatus, 0);
 		}
 
 		// background process or non fg-mode
 		else
 		{
 			parent = getpid();
-			// printf("Executing background process %d\n", spawnPid);
+			printf("Executing background process %d\n", spawnPid);
+			fflush(stdout);
 			// only add background processes to the array
 			bgPIDs[pidCount] = spawnPid;
 			pidCount++;
@@ -605,7 +613,28 @@ pid_t forkChild(struct userInput *currentInput)
 		}
 	}
 	}
-	return spawnPid;
+}
+
+/**********************************************************************************/
+/********************************** checkBGPID **************************************/
+/**********************************************************************************/
+
+void checkBGPIDs()
+{
+	int i;
+	int bgChildExitMethod = -5;
+
+	for (i = 0; i < pidCount; i++)
+	{
+		pid_t spawnid = waitpid(bgPIDs[i], &bgChildExitMethod, WNOHANG);
+		if (spawnid > 0)
+		{
+			printf("Background process %d is terminated\n", spawnid);
+			checkExitStatus(bgChildExitMethod);
+			removePID(spawnid);
+		}
+	}
+	fflush(stdout);
 }
 
 /**********************************************************************************/
@@ -641,14 +670,17 @@ void checkExitStatus(int exitStatus)
 	{
 		int exitStat = WEXITSTATUS(exitStatus);
 
-		printf("Process %d exited with exit status %d\n", lastFG, exitStat);
+		printf("Process exited with exit status %d\n", exitStat);
+		// printf("Process %d exited with exit status %d\n", lastFG, exitStat);
 		fflush(stdout);
 	}
 
 	else if (WIFSIGNALED(exitStatus))
 	{
 		int termSignal = WTERMSIG(exitStatus);
-		printf("Process %d was terminated by signal %i\n", lastFG, termSignal);
+
+		printf("Process was terminated by signal %i\n", termSignal);
+		// printf("Process %d was terminated by signal %i\n", lastFG, termSignal);
 		fflush(stdout);
 	}
 }
