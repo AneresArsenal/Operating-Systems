@@ -65,8 +65,8 @@ char input[maxchars];
 /********************************* sigchld ****************************************/
 /**********************************************************************************/
 
-void CATCHsigchild(int signal)
-{
+// void CATCHsigchild(int signal)
+// {
 	// int bgChildExitMethod = -5;
 	// pid_t spawnid = waitpid(-1, &bgChildExitMethod, WNOHANG);
 
@@ -82,7 +82,7 @@ void CATCHsigchild(int signal)
 	// }
 
 	// write(STDOUT_FILENO, "\n: ", 2);
-}
+// }
 
 void removePID(pid_t pid)
 {
@@ -117,9 +117,9 @@ void removePID(pid_t pid)
 void CATCHsigint(int signal)
 {
 	int fgChildExitMethod = -5;
-	if (lastFG != -99)
+	if (lastFG != -99 && waitpid(lastFG, &lastFGExitStatus, 0) == lastFG)
 	{
-		waitpid(lastFG, &lastFGExitStatus, 0);
+		write(STDOUT_FILENO,"Process terminated by signal 2\n", 31);
 	}
 	else
 	{
@@ -278,7 +278,7 @@ int getUserInput(struct userInput *currentInput)
 	count = i;
 
 	i = 0;
-	while (((strcmp(inputs[i], "&") != 0) || i < count - 1) && (strcmp(inputs[i], "<") != 0) && (strcmp(inputs[i], ">") != 0) && (strlen(inputs[i]) != 0))
+	while (((strcmp(inputs[i], "&") != 0) || (i < count - 1)) && (strcmp(inputs[i], "<") != 0) && (strcmp(inputs[i], ">") != 0) && (strlen(inputs[i]) != 0))
 	{
 		char *finalStr = checkExpansion(inputs[i]);
 
@@ -313,7 +313,7 @@ int getUserInput(struct userInput *currentInput)
 				strcpy(currentInput->output[0], inputs[j + 1]);
 			}
 
-			if ((strcmp(inputs[j], "&") == 0) && j == count-1) //only take & that is placed last
+			if ((strcmp(inputs[j], "&") == 0) && j == count - 1) //only take & that is placed
 			{
 				currentInput->backgroundFlag = 1;
 			}
