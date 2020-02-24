@@ -1,10 +1,8 @@
 compile:
-		gcc -g -o commands commands.c
-		gcc -g -o main main.c
-		gcc -g -o test test.c
+		gcc -g -o smallsh smallsh.c
 
 run:
-		commands
+		smallsh
 
 clean:
-		-rm -f commands
+		-rm -f smallsh
