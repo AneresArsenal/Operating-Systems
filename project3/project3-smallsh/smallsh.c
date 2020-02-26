@@ -486,7 +486,7 @@ void runNonBuilt(struct userInput *currentInput)
 	ignoreSIGTSTP.sa_handler = SIG_IGN;
 	sigaction(SIGTSTP, &ignoreSIGTSTP, NULL);
 
-
+	
 	int argCount = currentInput->argCount;
 	int sourceFD, targetFD, result, errorflag = 0;
 
