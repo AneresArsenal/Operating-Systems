@@ -1,5 +1,6 @@
 {
 	"files.associations": {
-		"smallsh.h": "c"
+		"smallsh.h": "c",
+		"types.h": "c"
 	}
 }
