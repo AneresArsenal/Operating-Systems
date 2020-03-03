@@ -14,6 +14,8 @@
 #include <math.h>
 #include <time.h>
 
+// global variables
+#define maxchars 255
 struct keyValue
 {
 	int key;
@@ -28,106 +30,159 @@ struct keyMap
 char **generatekey();
 struct keyMap mapKey();
 void printMap(struct keyMap map);
+void printKey(struct keyMap map, int length);
 int checkArr(char array[], char alphabet);
+void error(const char *msg)
+{
+	perror(msg);
+	exit(0);
+}
 
 int main(int argc, char *argv[])
 {
-	int counter;
+	int i, flag;
 	struct keyMap map;
-
-	// printf("Program Name Is: %s", argv[0]);
-	// if (argc == 1)
-	// 	printf("\nNo Extra Command Line Argument Passed Other Than Program Name");
-	// if (argc >= 2)
-	// {
-	// 	printf("\nNumber Of Arguments Passed: %d", argc);
-	// 	printf("\n----Following Are The Command Line Arguments Passed----");
-	// 	for (counter = 0; counter < argc; counter++)
-	// 		printf("\nargv[%d]: %s\n", counter, argv[counter]);
-	// }
+	srand(time(NULL));
 
 	int length = atoi(argv[1]);
-	// printf("\n Key length is %d\n", length);
 
-	map = mapKey();
-	// printMap(map);
+	char string[length + 1];
+
+	char alpha;
+
+	memset(string, '\0', length);
+
+	// printf("\n Key length is %d\n", length);
+	for (i = 0; i < length; i++)
+	{
+
+		flag = rand() % (10);
+		// printf("Flag is %i\n", flag);
+		if (flag <= 8)
+		{
+			alpha = rand() % (26) + 65;
+		}
+
+		else
+		{
+			alpha = 32;
+		}
+		string[i] = alpha;
+		// printf("Char added %c\n", alpha);
+		// printf("Key %i: char %c code is %i\n", i, alpha, alpha);
+	}
+	// fflush(stdout);
+	// last character keygen outputs should be a newline
+	string[length] = '\n';
 
 	// no output file provided, outputs to stdout
 	if (argc == 2)
 	{
+		// printKey(map, length);
+		printf("%s", string);
 	}
 
 	// output file provided, write to file
-	else if (argc == 3)
-	{
-	}
+	// else if (argc == 4)
+	// {
+	// 	int file_descriptor;
+	// 	ssize_t nread, nwritten;
+	// 	char readBuffer[256];
+
+	// 	// attempt to open file
+	// 	file_descriptor = open(argv[3], O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+
+	// 	// throw error if unsuccessful
+	// 	if (file_descriptor == -1)
+	// 	{
+	// 		error("Hull breach - open() failed \n");
+	// 		exit(1);
+	// 	}
+
+	// 	nwritten = write(file_descriptor, string, strlen(string) * sizeof(char));
+	// 	// clear buffer before reading the file
+	// 	memset(readBuffer, '\0', sizeof(readBuffer)); // Clear out the array before using it
+	// 	lseek(file_descriptor, 0, SEEK_SET);		  // Reset the file pointer to the beginning of the file
+	// 	nread = read(file_descriptor, readBuffer, sizeof(readBuffer));
+	// 	printf("File contents:\n%s\n", readBuffer);
+	// }
 
 	return 0;
 }
 
-struct keyMap mapKey()
-{
+// struct keyMap mapKey()
+// {
 
-	char keys[27];
-	memset(keys, '\0', 27);
-	int alphabet;
-	int flag = -1;
+// 	char keys[27];
+// 	memset(keys, '\0', 27);
+// 	int alphabet;
+// 	int flag = -1;
 
-	struct keyMap map;
-	int i;
+// 	struct keyMap map;
+// 	int i;
 
-	for (i = 0; i < 27; i++)
-	{
-		map.keyValues[i].key = i;
+// 	for (i = 0; i < 27; i++)
+// 	{
+// 		map.keyValues[i].key = i;
 
-		if (i == 26)
-		{
-			alphabet = 32;
-			map.keyValues[i].alphabet = 32;
-			// printf("Key %i: char %c code is %i \n", i, alphabet, alphabet);
-			break;
-		}
+// 		if (i == 26)
+// 		{
+// 			alphabet = 32;
+// 			map.keyValues[i].alphabet = 32;
+// 			// printf("Key %i: char %c code is %i \n", i, alphabet, alphabet);
+// 			break;
+// 		}
 
-		while (flag == -1)
-		{
+// 		while (flag == -1)
+// 		{
 
-			alphabet = rand() % (26) + 65;
-			flag = checkArr(keys, alphabet);
-		}
+// 			alphabet = rand() % (26) + 65;
+// 			flag = checkArr(keys, alphabet);
+// 		}
 
-		map.keyValues[i].alphabet = alphabet;
-		keys[i] = alphabet;
-		// printf("Key %i: char %c code is %i \n", i, alphabet, alphabet);
-		flag = -1;
-	}
+// 		map.keyValues[i].alphabet = alphabet;
+// 		keys[i] = alphabet;
+// 		// printf("Key %i: char %c code is %i \n", i, alphabet, alphabet);
+// 		flag = -1;
+// 	}
 
-	return map;
-}
+// 	return map;
+// }
 
-int checkArr(char array[], char alphabet)
-{
-	int i;
+// int checkArr(char array[], char alphabet)
+// {
+// 	int i;
 
-	for (i = 0; i < 27; i++)
-	{
-		if (alphabet == array[i])
-		{
-			return -1;
-		}
-	}
+// 	for (i = 0; i < 27; i++)
+// 	{
+// 		if (alphabet == array[i])
+// 		{
+// 			return -1;
+// 		}
+// 	}
 
-	return 0;
-}
+// 	return 0;
+// }
 
-void printMap(struct keyMap map)
-{
-	int i;
+// void printMap(struct keyMap map)
+// {
+// 	int i;
 
-	for (i = 0; i < 27; i++)
-	{
-		// printf("Key %i, Char %c \n", map.keyValues[i].key, map.keyValues[i].alphabet);
-	}
-}
+// 	for (i = 0; i < 27; i++)
+// 	{
+// 		// printf("Key %i, Char %c \n", map.keyValues[i].key, map.keyValues[i].alphabet);
+// 	}
+// }
+
+// void printKey(struct keyMap map, int length)
+// {
+// 	int i;
+
+// 	for (i = 0; i < 27; i++)
+// 	{
+// 	printf("Key %i, Char %c \n", map.keyValues[i].key, map.keyValues[i].alphabet);
+// 	}
+// }
 
 // https://www.geeksforgeeks.org/command-line-arguments-in-c-cpp/
 // https://stackoverflow.com/questions/17909215/c-random-numbers-between-10-and-30

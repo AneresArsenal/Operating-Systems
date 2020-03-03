@@ -13,6 +13,7 @@ void error(const char *msg)
 	exit(0);
 } // Error function used for reporting issues
 
+
 int main(int argc, char *argv[])
 {
 	int socketFD, portNumber, charsWritten, charsRead;
@@ -20,11 +21,17 @@ int main(int argc, char *argv[])
 	struct hostent *serverHostInfo;
 	char buffer[256];
 
-	if (argc < 3)
+	printf("Arg count is %i", argc);
+
+	if (argc != 4)
 	{
-		fprintf(stderr, "USAGE: %s hostname port\n", argv[0]);
+		// fprintf(stderr, "USAGE: %s plaintext key port\n", argv[0]);
 		exit(0);
-	} // Check usage & args
+	} 
+	
+
+
+
 
 	// Set up the server address struct
 	memset((char *)&serverAddress, '\0', sizeof(serverAddress)); // Clear out the address struct
@@ -32,7 +39,7 @@ int main(int argc, char *argv[])
 	serverAddress.sin_family = AF_INET;							 // Create a network-capable socket
 	serverAddress.sin_port = htons(portNumber);					 // Store the port number
 	serverHostInfo = gethostbyname(argv[1]);					 // Convert the machine name into a special form of address
-	
+
 	if (serverHostInfo == NULL)
 	{
 		fprintf(stderr, "CLIENT: ERROR, no such host\n");
@@ -70,5 +77,11 @@ int main(int argc, char *argv[])
 	printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
 
 	close(socketFD); // Close the socket
+	return 0;
+}
+
+
+int checklength(char plaintext[], char key[]){
+
 	return 0;
 }

@@ -28,6 +28,7 @@ void error(const char *msg)
 
 int main(int argc, char *argv[])
 {
+
 	int listenSocketFD, establishedConnectionFD, portNumber, charsRead;
 	socklen_t sizeOfClientInfo;
 	char buffer[256];
@@ -62,6 +63,7 @@ int main(int argc, char *argv[])
 	}
 
 	listen(listenSocketFD, 5); // Flip the socket on - it can now receive up to 5 connections
+
 	while (1)
 	{
 		// Accept a connection, blocking if one is not available until one connects
@@ -69,33 +71,41 @@ int main(int argc, char *argv[])
 		establishedConnectionFD = accept(listenSocketFD, (struct sockaddr *)&clientAddress, &sizeOfClientInfo); // Accept
 		if (establishedConnectionFD < 0)
 		{
-			// perror("Hull breach: accept()");
-			// exit(1);
 			error("ERROR on accept");
 		}
 
+		/* Fork to create a process for this client and perform a test to see
+whether we're the parent or the child. */
+
 		printf("SERVER: Connected client at port %d\n", ntohs(clientAddress.sin_port));
-		// Get the message from the client and display it
-		memset(buffer, '\0', 256);
-		charsRead = recv(establishedConnectionFD, buffer, 255, 0); // Read the client's message from the socket
-		if (charsRead < 0)
+		if (fork() == 0)
 		{
-			error("ERROR reading from socket");
+			// Get the message from the client and display it
+
+			memset(buffer, '\0', 256);
+			charsRead = recv(establishedConnectionFD, buffer, 255, 0); // Read the client's message from the socket
+			if (charsRead < 0)
+			{
+				error("ERROR reading from socket");
+			}
+
+			printf("SERVER: I received this from the client: \"%s\"\n", buffer);
+
+			// Send a Success message back to the client
+			charsRead = send(establishedConnectionFD, "I am the server, and I got your message", 39, 0); // Send success back
+			if (charsRead < 0)
+				error("ERROR writing to socket");
+			close(establishedConnectionFD); // Close the existing socket which is connected to the client
+		}
+		else
+		{
+			close(listenSocketFD); // Close the listening socket
 		}
 
-		// else if (charsRead < 255)
-		// {
-		// 	error("ERROR potential data loss");
-		// }
-
-		printf("SERVER: I received this from the client: \"%s\"\n", buffer);
-
-		// Send a Success message back to the client
-		charsRead = send(establishedConnectionFD, "I am the server, and I got your message", 39, 0); // Send success back
-		if (charsRead < 0)
-			error("ERROR writing to socket");
-		close(establishedConnectionFD); // Close the existing socket which is connected to the client
+		return 0;
 	}
-	close(listenSocketFD); // Close the listening socket
-	return 0;
 }
+
+
+// reference
+// https://stackoverflow.com/questions/13669474/multiclient-server-using-fork
