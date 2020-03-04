@@ -1,6 +1,8 @@
 {
 	"files.associations": {
 		"smallsh.h": "c",
-		"types.h": "c"
+		"types.h": "c",
+		"string": "c",
+		"iosfwd": "c"
 	}
 }
