@@ -89,28 +89,15 @@ int main(int argc, char *argv[])
 	if (connect(socketFD, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0) // Connect socket to address
 		error("CLIENT: ERROR connecting");
 
-	// Get input message from user
-	// printf("CLIENT: Enter text to send to the server, and then hit enter: ");
-	// memset(buffer, '\0', sizeof(buffer));	 // Clear out the buffer array
-	// fgets(buffer, sizeof(buffer) - 1, stdin); // Get input from the user, trunc to buffer - 1 chars, leaving \0
-	// buffer[strcspn(buffer, "\n")] = '\0';	 // Remove the trailing \n that fgets adds
-
-	// Send message to server
-	// charsWritten = send(socketFD, buffer, strlen(buffer), 0); // Write to the server
-	// memset(buffer, '\0', sizeof(buffer));
-
 	memset(buffer, '\0', sizeof(buffer));
 	sprintf(buffer, "%s", filestring);
-
-	printf("CLIENT: I sent this file to the server:\n%s", buffer);
+	printf("CLIENT: I sent this file to the server: %s", buffer);
 
 	charsWritten = send(socketFD, buffer, strlen(buffer), 0);
 	if (charsWritten < 0)
 		error("CLIENT: ERROR writing to socket");
 	if (charsWritten < strlen(buffer))
-		printf("CLIENT: WARNING: Not all data written to socket!\n");
-
-	printf("CLIENT: I received this from the server:\n");
+		error("CLIENT: WARNING: Not all data written to socket!");
 
 	// Get return message from server
 	memset(buffer, '\0', sizeof(buffer));					   // Clear out the buffer again for reuse
@@ -118,36 +105,32 @@ int main(int argc, char *argv[])
 	if (charsRead < 0)
 	{
 		error("CLIENT: ERROR reading from socket");
-		}
+	}
 
-
-
-	// printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
+	printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
 
 	memset(buffer, '\0', sizeof(buffer));
 	sprintf(buffer, "%s", keystring);
 
-	printf("CLIENT: I sent this key to the server:\n%s", buffer);
+	printf("CLIENT: I sent this key to the server:%s", buffer);
 
 	charsWritten = send(socketFD, buffer, strlen(buffer), 0);
 	if (charsWritten < 0)
 		error("CLIENT: ERROR writing to socket");
 	if (charsWritten < strlen(buffer))
-		printf("CLIENT: WARNING: Not all data written to socket!\n");
+		error("CLIENT: WARNING: Not all data written to socket!");
 
-	printf("CLIENT: I received this from the server:\n");
-	while (charsRead > 0)
+	// printf("CLIENT: I received this from the server:\n");
+
+	// Get return message from server
+	memset(buffer, '\0', sizeof(buffer));					   // Clear out the buffer again for reuse
+	charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); // Read data from the socket, leaving \0 at end
+	if (charsRead < 0)
 	{
-		// Get return message from server
-		memset(buffer, '\0', sizeof(buffer));					   // Clear out the buffer again for reuse
-		charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); // Read data from the socket, leaving \0 at end
-		if (charsRead < 0)
-		{
-			error("CLIENT: ERROR reading from socket");
-		}
-
-		printf("%s", buffer);
+		error("CLIENT: ERROR reading from socket");
 	}
+
+	printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
 
 	close(socketFD); // Close the socket
 	return 0;

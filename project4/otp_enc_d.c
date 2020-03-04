@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#define maxchars 63999
 
 void error(const char *msg)
 {
@@ -26,12 +27,14 @@ void error(const char *msg)
 	exit(1);
 } // Error function used for reporting issues
 
+void receivedata(int establishedConnectionFD, char *string);
+
 int main(int argc, char *argv[])
 {
 
-	int listenSocketFD, establishedConnectionFD, portNumber, charsRead;
+	int listenSocketFD, establishedConnectionFD, portNumber, charsRead, charsWritten;
 	socklen_t sizeOfClientInfo;
-	char buffer[256];
+	char buffer[maxchars];
 	struct sockaddr_in serverAddress, clientAddress;
 
 	if (argc < 2)
@@ -64,49 +67,84 @@ int main(int argc, char *argv[])
 
 	listen(listenSocketFD, 5); // Flip the socket on - it can now receive up to 5 connections
 
-	while (1)
+	// Accept a connection, blocking if one is not available until one connects
+	sizeOfClientInfo = sizeof(clientAddress);																// Get the size of the address for the client that will connect
+	establishedConnectionFD = accept(listenSocketFD, (struct sockaddr *)&clientAddress, &sizeOfClientInfo); // Accept
+	if (establishedConnectionFD < 0)
 	{
-		// Accept a connection, blocking if one is not available until one connects
-		sizeOfClientInfo = sizeof(clientAddress);																// Get the size of the address for the client that will connect
-		establishedConnectionFD = accept(listenSocketFD, (struct sockaddr *)&clientAddress, &sizeOfClientInfo); // Accept
-		if (establishedConnectionFD < 0)
-		{
-			error("ERROR on accept");
-		}
+		error("ERROR on accept");
+	}
 
-		/* Fork to create a process for this client and perform a test to see
+	/* Fork to create a process for this client and perform a test to see
 whether we're the parent or the child. */
 
-		printf("SERVER: Connected client at port %d\n", ntohs(clientAddress.sin_port));
+	printf("SERVER: Connected client at port %d\n", ntohs(clientAddress.sin_port));
 
-		// Get the message from the client and display it
-		printf("SERVER: I received this from the client:\n");
+	char filestring[maxchars];
+	receivedata(establishedConnectionFD, filestring);
 
-		do
-		{
-			memset(buffer, '\0', 256);
-			charsRead = recv(establishedConnectionFD, buffer, 255, 0); // Read the client's message from the socket
-			if (charsRead < 0)
-			{
-				error("ERROR reading from socket");
-				break;
-			}
-			printf("%s", buffer);
-		} while (charsRead != 0);
+	// memset(buffer, '\0', maxchars);
+	// charsRead = recv(establishedConnectionFD, buffer, sizeof(buffer) - 1, 0); // Read the client's message from the socket
+	// if (charsRead < 0)
+	// {
+	// 	error("ERROR reading from socket");
+	// }
+	// // printf("%s", buffer);
+	// printf("SERVER: I received this from the client: %s", buffer);
 
-		// printf("SERVER: I received this from the client: \"%s\"\n", buffer);
+	// Get the message from the client and display it
+	// printf("SERVER: I received this from the client:\n");
 
-		// Send a Success message back to the client
-		charsRead = send(establishedConnectionFD, "I am the server, and I got your message", 39, 0); // Send success back
-		if (charsRead < 0)
-			error("ERROR writing to socket");
-		close(establishedConnectionFD); // Close the existing socket which is connected to the client
+	// Send a Success message back to the client
+	memset(buffer, '\0', maxchars);
+	sprintf(buffer, "Success! I am the server, and I got your message");
 
-		close(listenSocketFD); // Close the listening socket
-		// }
+	charsWritten = send(establishedConnectionFD, buffer, strlen(buffer), 0); // Send success back
+	if (charsWritten < 0)
+		error("ERROR writing to socket");
 
-		return 0;
+	printf("\nSERVER: Waiting for next data package....\n\n");
+
+	memset(buffer, '\0', maxchars);
+	charsRead = recv(establishedConnectionFD, buffer, sizeof(buffer) - 1, 0); // Read the client's message from the socket
+	if (charsRead < 0)
+	{
+		error("ERROR reading from socket");
 	}
+	// printf("%s", buffer);
+	printf("SERVER: I received this from the client: %s", buffer);
+
+	printf("\nSERVER: Server shutting down...\n\n");
+
+	close(establishedConnectionFD); // Close the existing socket which is connected to the client
+
+	printf("\nSERVER: Socket connecting to client closed\n");
+
+	close(listenSocketFD); // Close the listening socket
+
+	printf("\nSERVER: Close listening socket\n");
+	// }
+
+	return 0;
+}
+
+void receivedata(int establishedConnectionFD, char *string)
+{
+	int charsReceived;
+	char buffer[maxchars];
+	memset(buffer, '\0', maxchars);
+
+	// Read the client's message from the socket
+	charsReceived = recv(establishedConnectionFD, buffer, sizeof(buffer) - 1, 0);
+
+	if (charsReceived < 0)
+	{
+		error("ERROR reading from socket");
+	}
+	// printf("%s", buffer);
+	sprintf(string, "%s", buffer);
+	printf("SERVER: I received this from the client: %s", buffer);
+	printf("SERVER: String saved as: %s", string);
 }
 
 // reference
