@@ -78,29 +78,32 @@ int main(int argc, char *argv[])
 whether we're the parent or the child. */
 
 		printf("SERVER: Connected client at port %d\n", ntohs(clientAddress.sin_port));
-		if (fork() == 0)
-		{
-			// Get the message from the client and display it
 
+		// Get the message from the client and display it
+		printf("SERVER: I received this from the client:\n");
+
+		do
+		{
 			memset(buffer, '\0', 256);
 			charsRead = recv(establishedConnectionFD, buffer, 255, 0); // Read the client's message from the socket
 			if (charsRead < 0)
 			{
 				error("ERROR reading from socket");
+				break;
 			}
+			printf("%s", buffer);
+		} while (charsRead != 0);
 
-			printf("SERVER: I received this from the client: \"%s\"\n", buffer);
+		// printf("SERVER: I received this from the client: \"%s\"\n", buffer);
 
-			// Send a Success message back to the client
-			charsRead = send(establishedConnectionFD, "I am the server, and I got your message", 39, 0); // Send success back
-			if (charsRead < 0)
-				error("ERROR writing to socket");
-			close(establishedConnectionFD); // Close the existing socket which is connected to the client
-		}
-		else
-		{
-			close(listenSocketFD); // Close the listening socket
-		}
+		// Send a Success message back to the client
+		charsRead = send(establishedConnectionFD, "I am the server, and I got your message", 39, 0); // Send success back
+		if (charsRead < 0)
+			error("ERROR writing to socket");
+		close(establishedConnectionFD); // Close the existing socket which is connected to the client
+
+		close(listenSocketFD); // Close the listening socket
+		// }
 
 		return 0;
 	}
@@ -108,3 +111,4 @@ whether we're the parent or the child. */
 
 // reference
 // https://stackoverflow.com/questions/13669474/multiclient-server-using-fork
+// https://stackoverflow.com/questions/16007789/keep-socket-open-in-c

@@ -71,11 +71,8 @@ int main(int argc, char *argv[])
 				string2[i - 63999] = alpha;
 			}
 			
-
-			// printf("Char added %c\n", alpha);
-			// printf("Key %i: char %c code is %i\n", i, alpha, alpha);
 		}
-		// fflush(stdout);
+
 		// last character keygen outputs should be a newline
 		string2[length-63999] = '\n';
 		printf("%s%s", string, string2);
@@ -100,7 +97,8 @@ int main(int argc, char *argv[])
 			// printf("Char added %c\n", alpha);
 			// printf("Key %i: char %c code is %i\n", i, alpha, alpha);
 		}
-		// fflush(stdout);
+	
+
 		// last character keygen outputs should be a newline
 		string[length] = '\n';
 		printf("%s", string);

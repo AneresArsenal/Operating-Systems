@@ -10,7 +10,9 @@
 #include <fcntl.h>
 
 // global variables
-#define maxchars 70000
+#define maxchars 63999
+int countFile;
+int countKey;
 
 void error(const char *msg)
 {
@@ -100,36 +102,52 @@ int main(int argc, char *argv[])
 	memset(buffer, '\0', sizeof(buffer));
 	sprintf(buffer, "%s", filestring);
 
+	printf("CLIENT: I sent this file to the server:\n%s", buffer);
+
 	charsWritten = send(socketFD, buffer, strlen(buffer), 0);
 	if (charsWritten < 0)
 		error("CLIENT: ERROR writing to socket");
 	if (charsWritten < strlen(buffer))
 		printf("CLIENT: WARNING: Not all data written to socket!\n");
 
+	printf("CLIENT: I received this from the server:\n");
+
 	// Get return message from server
 	memset(buffer, '\0', sizeof(buffer));					   // Clear out the buffer again for reuse
 	charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); // Read data from the socket, leaving \0 at end
 	if (charsRead < 0)
+	{
 		error("CLIENT: ERROR reading from socket");
-	printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
+		}
+
+
+
+	// printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
 
 	memset(buffer, '\0', sizeof(buffer));
 	sprintf(buffer, "%s", keystring);
 
+	printf("CLIENT: I sent this key to the server:\n%s", buffer);
+
 	charsWritten = send(socketFD, buffer, strlen(buffer), 0);
 	if (charsWritten < 0)
 		error("CLIENT: ERROR writing to socket");
 	if (charsWritten < strlen(buffer))
 		printf("CLIENT: WARNING: Not all data written to socket!\n");
 
-	// Get return message from server
-	memset(buffer, '\0', sizeof(buffer));					   // Clear out the buffer again for reuse
-	charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); // Read data from the socket, leaving \0 at end
-	if (charsRead < 0)
-		error("CLIENT: ERROR reading from socket");
-	printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
+	printf("CLIENT: I received this from the server:\n");
+	while (charsRead > 0)
+	{
+		// Get return message from server
+		memset(buffer, '\0', sizeof(buffer));					   // Clear out the buffer again for reuse
+		charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); // Read data from the socket, leaving \0 at end
+		if (charsRead < 0)
+		{
+			error("CLIENT: ERROR reading from socket");
+		}
 
-	
+		printf("%s", buffer);
+	}
 
 	close(socketFD); // Close the socket
 	return 0;
@@ -138,8 +156,8 @@ int main(int argc, char *argv[])
 int checkLength(char filepath[], char key[])
 {
 
-	int countFile = 0;
-	int countKey = 0;
+	countFile = 0;
+	countKey = 0;
 	int file_descriptor, key_descriptor;
 	FILE *file, *keyfile;
 	char line[maxchars];
@@ -183,7 +201,7 @@ int checkLength(char filepath[], char key[])
 
 	if (countFile <= countKey)
 	{
-		printf("key length (%i) is longer or equal to plaintext length (%i)\n", countKey, countFile);
+		// printf("key length (%i) is longer or equal to plaintext length (%i)\n", countKey, countFile);
 		return 0;
 	}
 	else
