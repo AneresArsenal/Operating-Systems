@@ -27,7 +27,8 @@ void error(const char *msg)
 	exit(1);
 } // Error function used for reporting issues
 
-void receivedata(int establishedConnectionFD, char *string);
+void receiveData(int establishedConnectionFD, char *string);
+void sendSuccessMessgage(int establishedConnectionFD);
 
 int main(int argc, char *argv[])
 {
@@ -78,57 +79,30 @@ int main(int argc, char *argv[])
 	/* Fork to create a process for this client and perform a test to see
 whether we're the parent or the child. */
 
-	printf("SERVER: Connected client at port %d\n", ntohs(clientAddress.sin_port));
+	// printf("SERVER: Connected client at port %d\n", ntohs(clientAddress.sin_port));
 
 	char filestring[maxchars];
-	receivedata(establishedConnectionFD, filestring);
-
-	// memset(buffer, '\0', maxchars);
-	// charsRead = recv(establishedConnectionFD, buffer, sizeof(buffer) - 1, 0); // Read the client's message from the socket
-	// if (charsRead < 0)
-	// {
-	// 	error("ERROR reading from socket");
-	// }
-	// // printf("%s", buffer);
-	// printf("SERVER: I received this from the client: %s", buffer);
-
-	// Get the message from the client and display it
-	// printf("SERVER: I received this from the client:\n");
+	receiveData(establishedConnectionFD, filestring);
 
 	// Send a Success message back to the client
-	memset(buffer, '\0', maxchars);
-	sprintf(buffer, "Success! I am the server, and I got your message");
+	sendSuccessMessgage(establishedConnectionFD);
 
-	charsWritten = send(establishedConnectionFD, buffer, strlen(buffer), 0); // Send success back
-	if (charsWritten < 0)
-		error("ERROR writing to socket");
+	char keystring[maxchars];
+	receiveData(establishedConnectionFD, keystring);
 
-	printf("\nSERVER: Waiting for next data package....\n\n");
-
-	memset(buffer, '\0', maxchars);
-	charsRead = recv(establishedConnectionFD, buffer, sizeof(buffer) - 1, 0); // Read the client's message from the socket
-	if (charsRead < 0)
-	{
-		error("ERROR reading from socket");
-	}
-	// printf("%s", buffer);
-	printf("SERVER: I received this from the client: %s", buffer);
+	// Send a Success message back to the client
+	sendSuccessMessgage(establishedConnectionFD);
 
 	printf("\nSERVER: Server shutting down...\n\n");
 
 	close(establishedConnectionFD); // Close the existing socket which is connected to the client
 
-	printf("\nSERVER: Socket connecting to client closed\n");
-
 	close(listenSocketFD); // Close the listening socket
-
-	printf("\nSERVER: Close listening socket\n");
-	// }
 
 	return 0;
 }
 
-void receivedata(int establishedConnectionFD, char *string)
+void receiveData(int establishedConnectionFD, char *string)
 {
 	int charsReceived;
 	char buffer[maxchars];
@@ -145,6 +119,23 @@ void receivedata(int establishedConnectionFD, char *string)
 	sprintf(string, "%s", buffer);
 	printf("SERVER: I received this from the client: %s", buffer);
 	printf("SERVER: String saved as: %s", string);
+}
+
+void sendSuccessMessgage(int establishedConnectionFD)
+{
+	char buffer[maxchars];
+	memset(buffer, '\0', maxchars);
+	int charsWritten;
+
+	// Send a Success message back to the client
+	memset(buffer, '\0', maxchars);
+	sprintf(buffer, "Success! I am the server, and I got your message\n");
+
+	charsWritten = send(establishedConnectionFD, buffer, strlen(buffer), 0); // Send success back
+	if (charsWritten < 0)
+		error("ERROR writing to socket");
+
+	printf("\nSERVER: Waiting for next data package....\n\n");
 }
 
 // reference
