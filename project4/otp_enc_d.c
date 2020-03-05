@@ -28,7 +28,9 @@ void error(const char *msg)
 } // Error function used for reporting issues
 
 void receiveData(int establishedConnectionFD, char *string);
-void sendSuccessMessgage(int establishedConnectionFD);
+void sendSuccessMessage(int establishedConnectionFD);
+void sendData(int establishedConnectionFD, char *encryptedFile);
+void encryptFile(char *file, char *key, char *encrypted);
 
 int main(int argc, char *argv[])
 {
@@ -85,15 +87,21 @@ whether we're the parent or the child. */
 	receiveData(establishedConnectionFD, filestring);
 
 	// Send a Success message back to the client
-	sendSuccessMessgage(establishedConnectionFD);
+	sendSuccessMessage(establishedConnectionFD);
 
 	char keystring[maxchars];
 	receiveData(establishedConnectionFD, keystring);
 
 	// Send a Success message back to the client
-	sendSuccessMessgage(establishedConnectionFD);
+	sendSuccessMessage(establishedConnectionFD);
 
 	printf("\nSERVER: Server shutting down...\n\n");
+
+	char encrypted[maxchars];
+	encryptFile(filestring, keystring, encrypted);
+	printf("Encryped file is %s", encrypted);
+
+	sendData(establishedConnectionFD, encrypted);
 
 	close(establishedConnectionFD); // Close the existing socket which is connected to the client
 
@@ -107,6 +115,7 @@ void receiveData(int establishedConnectionFD, char *string)
 	int charsReceived;
 	char buffer[maxchars];
 	memset(buffer, '\0', maxchars);
+	memset(string, '\0', maxchars);
 
 	// Read the client's message from the socket
 	charsReceived = recv(establishedConnectionFD, buffer, sizeof(buffer) - 1, 0);
@@ -118,17 +127,16 @@ void receiveData(int establishedConnectionFD, char *string)
 	// printf("%s", buffer);
 	sprintf(string, "%s", buffer);
 	printf("SERVER: I received this from the client: %s", buffer);
-	printf("SERVER: String saved as: %s", string);
+	// printf("SERVER: String saved as: %s", string);
 }
 
-void sendSuccessMessgage(int establishedConnectionFD)
+void sendSuccessMessage(int establishedConnectionFD)
 {
 	char buffer[maxchars];
 	memset(buffer, '\0', maxchars);
 	int charsWritten;
 
 	// Send a Success message back to the client
-	memset(buffer, '\0', maxchars);
 	sprintf(buffer, "Success! I am the server, and I got your message\n");
 
 	charsWritten = send(establishedConnectionFD, buffer, strlen(buffer), 0); // Send success back
@@ -138,6 +146,81 @@ void sendSuccessMessgage(int establishedConnectionFD)
 	printf("\nSERVER: Waiting for next data package....\n\n");
 }
 
+void sendData(int establishedConnectionFD, char *encryptedFile)
+{
+	int charsWritten;
+
+	charsWritten = send(establishedConnectionFD, encryptedFile, strlen(encryptedFile), 0); // Send success back
+	if (charsWritten < 0)
+		error("ERROR writing to socket");
+
+	printf("\nSERVER: Waiting for next data package....\n\n");
+}
+
+void encryptFile(char *file, char *key, char *encrypted)
+{
+
+	int fileLength = strlen(file) - 1;
+	int i;
+	int total;
+	int result;
+	int fileChar;
+	int keyChar;
+	char currentChar;
+
+	for (i = 0; i < fileLength; i++)
+	{
+
+		if (file[i] != 32)
+		{
+			fileChar = file[i] - 64;
+		}
+		else
+		{
+			fileChar = 0;
+		}
+
+		if (key[i] != 32)
+		{
+			keyChar = key[i] - 64;
+		}
+		else
+		{
+			keyChar = 0;
+		}
+
+		total = fileChar + keyChar;
+
+		// if (total > 26)
+		// {
+		// 	total = total - 26;
+		// }
+		result = total % 26;
+
+		result = result + 64;
+
+		// strncat(temp, &currentChar, sizeof(currentChar));
+		if (result == 64)
+		{
+			currentChar = 32;
+		}
+		else
+		{
+			currentChar = result;
+		}
+
+		encrypted[i] = currentChar;
+		printf("Char %i   ", i);
+		printf("message: %i   ", fileChar);
+		printf("key: %i   ", keyChar);
+		printf("message + key: %i   ", total);
+		printf("ciphertext: %i  \n", encrypted[i]);
+	}
+
+	// to see all thevalue in temp array.
+	// printf("Final encrpyted string is: [%s]\n", encrypted);
+
+}
 // reference
 // https://stackoverflow.com/questions/13669474/multiclient-server-using-fork
 // https://stackoverflow.com/questions/16007789/keep-socket-open-in-c
