@@ -154,7 +154,7 @@ void sendData(int establishedConnectionFD, char *encryptedFile)
 	if (charsWritten < 0)
 		error("ERROR writing to socket");
 
-	printf("\nSERVER: Waiting for next data package....\n\n");
+	// printf("\nSERVER: Waiting for next data package....\n\n");
 }
 
 void encryptFile(char *file, char *key, char *encrypted)

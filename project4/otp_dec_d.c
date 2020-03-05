@@ -85,7 +85,7 @@ whether we're the parent or the child. */
 
 	char encrypted[maxchars];
 	decryptFile(filestring, keystring, encrypted);
-	printf("Encryped file is %s", encrypted);
+	// printf("Encrypted file is %s", encrypted);
 
 	sendData(establishedConnectionFD, encrypted);
 
@@ -112,7 +112,7 @@ void receiveData(int establishedConnectionFD, char *string)
 	}
 	// printf("%s", buffer);
 	sprintf(string, "%s", buffer);
-	printf("SERVER: I received this from the client: %s", buffer);
+	// printf("SERVER: I received this from the client: %s", buffer);
 	// printf("SERVER: String saved as: %s", string);
 }
 
@@ -129,7 +129,7 @@ void sendSuccessMessage(int establishedConnectionFD)
 	if (charsWritten < 0)
 		error("ERROR writing to socket");
 
-	printf("\nSERVER: Waiting for next data package....\n\n");
+	// printf("\nSERVER: Waiting for next data package....\n\n");
 }
 
 void sendData(int establishedConnectionFD, char *encryptedFile)
@@ -140,7 +140,7 @@ void sendData(int establishedConnectionFD, char *encryptedFile)
 	if (charsWritten < 0)
 		error("ERROR writing to socket");
 
-	printf("\nSERVER: Waiting for next data package....\n\n");
+	// printf("\nSERVER: Waiting for next data package....\n\n");
 }
 
 void decryptFile(char *file, char *key, char *encrypted)
