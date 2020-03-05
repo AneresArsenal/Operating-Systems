@@ -3,6 +3,7 @@
 		"smallsh.h": "c",
 		"types.h": "c",
 		"string": "c",
-		"iosfwd": "c"
+		"iosfwd": "c",
+		"unistd.h": "c"
 	}
 }

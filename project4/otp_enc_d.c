@@ -99,7 +99,7 @@ whether we're the parent or the child. */
 
 	char encrypted[maxchars];
 	encryptFile(filestring, keystring, encrypted);
-	printf("Encryped file is %s", encrypted);
+	// printf("Encrypted file is %s", encrypted);
 
 	sendData(establishedConnectionFD, encrypted);
 
@@ -126,7 +126,7 @@ void receiveData(int establishedConnectionFD, char *string)
 	}
 	// printf("%s", buffer);
 	sprintf(string, "%s", buffer);
-	printf("SERVER: I received this from the client: %s", buffer);
+	// printf("SERVER: I received this from the client: %s", buffer);
 	// printf("SERVER: String saved as: %s", string);
 }
 
@@ -143,7 +143,7 @@ void sendSuccessMessage(int establishedConnectionFD)
 	if (charsWritten < 0)
 		error("ERROR writing to socket");
 
-	printf("\nSERVER: Waiting for next data package....\n\n");
+	// printf("\nSERVER: Waiting for next data package....\n\n");
 }
 
 void sendData(int establishedConnectionFD, char *encryptedFile)
@@ -204,22 +204,26 @@ void encryptFile(char *file, char *key, char *encrypted)
 		{
 			currentChar = 32;
 		}
-		else
+		else if (result > 64 && result < 91)
 		{
 			currentChar = result;
 		}
 
+		else
+		{
+			error("SERVER: Bad input");
+		}
+
 		encrypted[i] = currentChar;
-		printf("Char %i   ", i);
-		printf("message: %i   ", fileChar);
-		printf("key: %i   ", keyChar);
-		printf("message + key: %i   ", total);
-		printf("ciphertext: %i  \n", encrypted[i]);
+		// printf("Char %i   ", i);
+		// printf("message: %i   ", fileChar);
+		// printf("key: %i   ", keyChar);
+		// printf("message + key: %i   ", total);
+		// printf("ciphertext: %i  \n", encrypted[i]);
 	}
 
 	// to see all thevalue in temp array.
 	// printf("Final encrpyted string is: [%s]\n", encrypted);
-
 }
 // reference
 // https://stackoverflow.com/questions/13669474/multiclient-server-using-fork

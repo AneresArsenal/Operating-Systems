@@ -24,6 +24,7 @@ void receiveData(int socketFD, char *string, int flag);
 void sendData(int socketFD, char *string);
 int checkLength(char file[], char key[]);
 void readFile(char filepath[], char *array);
+void checkString(char *string);
 
 int main(int argc, char *argv[])
 {
@@ -60,6 +61,7 @@ int main(int argc, char *argv[])
 	memset(keystring, '\0', sizeof(keystring));
 
 	readFile(argv[1], filestring);
+	checkString(filestring);
 	readFile(argv[2], keystring);
 
 	// Set up the server address struct
@@ -243,4 +245,25 @@ void readFile(char filepath[], char array[maxchars])
 	// array = readBuffer;
 	// printf("Final string is %s", readBuffer);
 	// sprintf(array, "%s", readBuffer);
+}
+
+
+void checkString(char *string)
+{
+	int length = strlen(string) - 1;
+	int i;
+	char currentChar;
+
+	for (i = 0; i < length; i++)
+	{
+		currentChar = string[i];
+
+		if ((currentChar < 'A' || currentChar > 'Z') && currentChar != 32)
+		{
+			printf("Position %i Current char is %c with value %i\n", i, string[i], string[i]);
+			// printf("Error found!");
+
+			error("CLIENT: input contains bad characters\n");
+		}
+	}
 }

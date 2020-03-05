@@ -10,12 +10,12 @@ ${echo} '-------------------PLAINTEXT1----------------------------'
 ${echo}
 ${echo}
 keygen 50 > mykey
-otp_enc_d 7878 &
-otp_enc plaintext1 mykey 7878 > ciphertext1
+otp_enc_d 23456 &
+otp_enc plaintext1 mykey 23456 > ciphertext1
 ${echo}
 ${echo}
-otp_dec_d 6767 &
-otp_dec ciphertext1 mykey 6767 > finaltext1
+otp_dec_d 67890 &
+otp_dec ciphertext1 mykey 67890 > finaltext1
 ${echo}
 ${echo} '----------------------RESULTS-----------------------------'
 ${echo}
@@ -31,12 +31,12 @@ ${echo} '-------------------PLAINTEXT2----------------------------'
 ${echo}
 ${echo}
 keygen 350 > mykey
-otp_enc_d 7878 &
-otp_enc plaintext2 mykey 7878 > ciphertext2
+otp_enc_d 23456 &
+otp_enc plaintext2 mykey 23456 > ciphertext2
 ${echo}
 ${echo}
-otp_dec_d 6767 &
-otp_dec ciphertext2 mykey 6767 > finaltext2
+otp_dec_d 67890 &
+otp_dec ciphertext2 mykey 67890 > finaltext2
 ${echo}
 ${echo} '----------------------RESULTS-----------------------------'
 ${echo}
@@ -52,12 +52,12 @@ ${echo} '-------------------PLAINTEXT3----------------------------'
 ${echo}
 ${echo}
 keygen 50 > mykey
-otp_enc_d 7878 &
-otp_enc plaintext3 mykey 7878 > ciphertext3
+otp_enc_d 23456 &
+otp_enc plaintext3 mykey 23456 > ciphertext3
 ${echo}
 ${echo}
-otp_dec_d 6767 &
-otp_dec ciphertext3 mykey 6767 > finaltext3
+otp_dec_d 67890 &
+otp_dec ciphertext3 mykey 67890 > finaltext3
 ${echo}
 ${echo} '----------------------RESULTS-----------------------------'
 ${echo}
@@ -72,12 +72,12 @@ ${echo}
 ${echo} '-------------------PLAINTEXT5----------------------------'
 ${echo}
 ${echo}
-otp_enc_d 7878 &
-otp_enc plaintext5 mykey 7878 > ciphertext5
+otp_enc_d 23456 &
+otp_enc plaintext5 mykey 23456 > ciphertext5
 ${echo}
 ${echo}
-otp_dec_d 6767 &
-otp_dec ciphertext5 mykey 6767 > finaltext5
+otp_dec_d 67890 &
+otp_dec ciphertext5 mykey 67890 > finaltext5
 ${echo}
 ${echo} '----------------------RESULTS-----------------------------'
 ${echo}
