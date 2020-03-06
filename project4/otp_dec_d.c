@@ -5,6 +5,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+
+// global variables
 #define maxchars 80000
 #define maxbuffer 63000
 
@@ -47,7 +49,7 @@ int main(int argc, char *argv[])
 		error("ERROR opening socket");
 
 	if (setsockopt(listenSocketFD, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
-    error("setsockopt(SO_REUSEADDR) failed");
+		error("setsockopt(SO_REUSEADDR) failed");
 
 	// Enable the socket to begin listening
 	// Connect socket to port
@@ -87,6 +89,12 @@ whether we're the parent or the child. */
 
 	// printf("\nSERVER: Server shutting down...\n\n");
 
+	char dummy[maxchars];
+	receiveData(establishedConnectionFD, dummy);
+
+	// printf("File string is %s\n", filestring);
+	// printf("Key string is %s\n", keystring);
+
 	char encrypted[maxchars];
 	decryptFile(filestring, keystring, encrypted);
 	// printf("Encrypted file is %s", encrypted);
@@ -99,6 +107,7 @@ whether we're the parent or the child. */
 
 	return 0;
 }
+
 
 void receiveData(int establishedConnectionFD, char *string)
 {
@@ -118,7 +127,7 @@ void receiveData(int establishedConnectionFD, char *string)
 		{
 			error("SERVER: ERROR reading from socket");
 		}
-		// printf("current package is %s", buffer);
+		// printf("current package is %s\n", buffer);
 
 		if (i == 0)
 		{
@@ -143,6 +152,7 @@ void receiveData(int establishedConnectionFD, char *string)
 	// printf("SERVER: String saved as: %s", string);
 }
 
+
 // void receiveData(int establishedConnectionFD, char *string)
 // {
 // 	int charsReceived;
@@ -159,7 +169,7 @@ void receiveData(int establishedConnectionFD, char *string)
 // 	}
 // 	// printf("%s", buffer);
 // 	sprintf(string, "%s", buffer);
-// 	// printf("SERVER: I received this from the client: %s", buffer);
+// 	printf("SERVER: I received this from the client: %s", buffer);
 // 	// printf("SERVER: String saved as: %s", string);
 // }
 
@@ -176,7 +186,7 @@ void sendSuccessMessage(int establishedConnectionFD)
 	if (charsWritten < 0)
 		error("ERROR writing to socket");
 
-	// printf("\nSERVER: Waiting for next data package....\n\n");
+	printf("\nSERVER: Waiting for next data package....\n\n");
 }
 
 void sendData(int establishedConnectionFD, char *encryptedFile)
@@ -187,7 +197,7 @@ void sendData(int establishedConnectionFD, char *encryptedFile)
 	if (charsWritten < 0)
 		error("ERROR writing to socket");
 
-	// printf("\nSERVER: Waiting for next data package....\n\n");
+	printf("\nSERVER: Waiting for next data package....\n\n");
 }
 
 void decryptFile(char *file, char *key, char *encrypted)
@@ -244,8 +254,7 @@ void decryptFile(char *file, char *key, char *encrypted)
 
 		else
 		{
-			error("DEC SERVER: Bad input");
-			// currentChar = result;
+			error("SERVER: Bad input");
 		}
 
 		encrypted[i] = currentChar;
@@ -257,6 +266,7 @@ void decryptFile(char *file, char *key, char *encrypted)
 	}
 
 	encrypted[i] = '\n';
+
 	// to see all thevalue in temp array.
 	// printf("Final encrpyted string is: [%s]\n", encrypted);
 }

@@ -18,7 +18,7 @@ int countKey;
 void error(const char *msg)
 {
 	perror(msg);
-	exit(1);
+	exit(0);
 } // Error function used for reporting issues
 
 void receiveData(int socketFD, char *string, int flag);
@@ -71,26 +71,29 @@ int main(int argc, char *argv[])
 	socketFD = socket(AF_INET, SOCK_STREAM, 0); // Create the socket
 	if (socketFD < 0)
 		error("CLIENT: ERROR opening socket");
-
+	
 	if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
-    error("setsockopt(SO_REUSEADDR) failed");
+		error("setsockopt(SO_REUSEADDR) failed");
 
 	// Connect to server
 	if (connect(socketFD, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0) // Connect socket to address
 		error("CLIENT: ERROR connecting");
 
+	// printf("sending file string now...\n");
 	sendData(socketFD, filestring);
 
 	// Get return message from server
 	char message[maxchars];
 	receiveData(socketFD, message, 0);
 
+	// printf("sending key string now...\n");
 	sendData(socketFD, keystring);
 
 	// Get return message from server
 	receiveData(socketFD, message, 0);
 
-	// sendData(socketFD, "Waiting for encrypted file now...\n");
+	sendData(socketFD, "Waiting for encrypted file now...\n");
+	// printf("Waiting for encrypted file now...\n");
 
 	receiveData(socketFD, message, 1);
 
@@ -113,9 +116,9 @@ void receiveData(int socketFD, char *string, int flag)
 
 		if (charsReceived < 0)
 		{
-			error("DEC CLIENT: ERROR reading from socket");
+			error("ENC CLIENT: ERROR reading from socket");
 		}
-		// printf("current package is %s\n", buffer);
+		// printf("current package is %s", buffer);
 
 		if (i == 0)
 		{
@@ -231,7 +234,7 @@ int checkLength(char filepath[], char key[])
 	}
 	else
 	{
-		error("DEC CLIENT: key is too short");
+		error("key is too short");
 		return -1;
 	}
 
@@ -296,11 +299,10 @@ void checkString(char *string)
 
 		if ((currentChar < 'A' || currentChar > 'Z') && currentChar != 32)
 		{
-			// printf("Position %i Current char is %c with value %i\n", i, string[i], string[i]);
-			// // printf("Error found!");
+			printf("Position %i Current char is %c with value %i\n", i, string[i], string[i]);
+			// printf("Error found!");
 
-			// printf("DEC CLIENT: input contains bad characters\n");
-			error("DEC CLIENT: input contains bad characters");
+			error("CLIENT: input contains bad characters\n");
 		}
 	}
 }
