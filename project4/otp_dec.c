@@ -10,14 +10,15 @@
 #include <fcntl.h>
 
 // global variables
-#define maxchars 63999
+#define maxchars 80000
+#define maxbuffer 63000
 int countFile;
 int countKey;
 
 void error(const char *msg)
 {
 	perror(msg);
-	exit(0);
+	exit(1);
 } // Error function used for reporting issues
 
 void receiveData(int socketFD, char *string, int flag);
@@ -71,6 +72,9 @@ int main(int argc, char *argv[])
 	if (socketFD < 0)
 		error("CLIENT: ERROR opening socket");
 
+	if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
+    error("setsockopt(SO_REUSEADDR) failed");
+
 	// Connect to server
 	if (connect(socketFD, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0) // Connect socket to address
 		error("CLIENT: ERROR connecting");
@@ -86,7 +90,7 @@ int main(int argc, char *argv[])
 	// Get return message from server
 	receiveData(socketFD, message, 0);
 
-	sendData(socketFD, "Waiting for encrypted file now...\n");
+	// sendData(socketFD, "Waiting for encrypted file now...\n");
 
 	receiveData(socketFD, message, 1);
 
@@ -97,24 +101,69 @@ int main(int argc, char *argv[])
 void receiveData(int socketFD, char *string, int flag)
 {
 	int charsReceived;
-	char buffer[maxchars];
-	memset(buffer, '\0', maxchars);
+	char buffer[maxbuffer];
+	memset(buffer, '\0', maxbuffer);
 	memset(string, '\0', maxchars);
+	int bufferLen = 0;
+	int i = 0;
 
-	// Read the client's message from the socket
-	charsReceived = recv(socketFD, buffer, sizeof(buffer) - 1, 0);
-
-	if (charsReceived < 0)
+	while (1)
 	{
-		error("ERROR reading from socket");
+		charsReceived = recv(socketFD, buffer, sizeof(buffer) - 1, 0);
+
+		if (charsReceived < 0)
+		{
+			error("DEC CLIENT: ERROR reading from socket");
+		}
+		// printf("current package is %s\n", buffer);
+
+		if (i == 0)
+		{
+			sprintf(string, "%s", buffer);
+		}
+
+		else
+		{
+			strcat(string, buffer);
+		}
+
+		bufferLen = strlen(buffer);
+		if ((buffer[bufferLen - 1]) == '\n')
+		{
+			// printf("Receiving finish!\n");
+			break;
+		}
+		memset(buffer, '\0', maxbuffer);
+		i++;
 	}
 
-	sprintf(string, "%s", buffer);
 	if (flag == 1)
 	{
-		printf("%s\n", buffer);
+		printf("%s", string);
 	}
 }
+
+// void receiveData(int socketFD, char *string, int flag)
+// {
+// 	int charsReceived;
+// 	char buffer[maxchars];
+// 	memset(buffer, '\0', maxchars);
+// 	memset(string, '\0', maxchars);
+
+// 	// Read the client's message from the socket
+// 	charsReceived = recv(socketFD, buffer, sizeof(buffer) - 1, 0);
+
+// 	if (charsReceived < 0)
+// 	{
+// 		error("ERROR reading from socket");
+// 	}
+
+// 	sprintf(string, "%s", buffer);
+// 	if (flag == 1)
+// 	{
+// 		printf("%s\n", buffer);
+// 	}
+// }
 
 void sendData(int socketFD, char *string)
 {
@@ -247,10 +296,11 @@ void checkString(char *string)
 
 		if ((currentChar < 'A' || currentChar > 'Z') && currentChar != 32)
 		{
-			printf("Position %i Current char is %c with value %i\n", i, string[i], string[i]);
-			// printf("Error found!");
+			// printf("Position %i Current char is %c with value %i\n", i, string[i], string[i]);
+			// // printf("Error found!");
 
-			printf("DEC CLIENT: input contains bad characters\n");
+			// printf("DEC CLIENT: input contains bad characters\n");
+			error("DEC CLIENT: input contains bad characters");
 		}
 	}
 }

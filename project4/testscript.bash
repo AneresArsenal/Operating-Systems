@@ -30,8 +30,6 @@ ${echo}
 wc < plaintext1
 wc < finaltext1
 ${echo}
-encPort=$(( $RANDOM % 2000 + 1000 ))
-decPort=$(( $RANDOM % 2000 + 5000 ))
 ${echo} '-------------------PLAINTEXT2----------------------------'
 ${echo}
 ${echo}
@@ -53,8 +51,6 @@ ${echo}
 wc < plaintext2
 wc < finaltext2
 ${echo}
-encPort=$(( $RANDOM % 2000 + 1000 ))
-decPort=$(( $RANDOM % 2000 + 5000 ))
 ${echo} '-------------------PLAINTEXT3----------------------------'
 ${echo}
 ${echo}
@@ -69,15 +65,34 @@ ${echo}
 ${echo} '----------------------RESULTS-----------------------------'
 ${echo}
 ${echo} 'plaintext3 contains'
-cat -A plaintext1
+cat -A plaintext3
 ${echo} 'finaltext3 contains'
-cat -A finaltext1
+cat -A finaltext3
 ${echo}
 wc < plaintext3
 wc < finaltext3
 ${echo}
-encPort=$(( $RANDOM % 2000 + 1000 ))
-decPort=$(( $RANDOM % 2000 + 5000 ))
+${echo} '-------------------PLAINTEXT4----------------------------'
+${echo}
+${echo}
+keygen 70000 > mykey
+otp_enc_d $encPort &
+otp_enc plaintext4 mykey $encPort > ciphertext4
+${echo}
+${echo}
+otp_dec_d $decPort &
+otp_dec ciphertext4 mykey $decPort > finaltext4
+${echo}
+${echo} '----------------------RESULTS-----------------------------'
+${echo}
+${echo} 'plaintext4 contains'
+cat -A plaintext4
+${echo} 'finaltext4 contains'
+cat -A finaltext4
+${echo}
+wc < plaintext4
+wc < finaltext4
+${echo}
 ${echo} '-------------------PLAINTEXT5----------------------------'
 ${echo}
 ${echo}
@@ -90,12 +105,12 @@ otp_dec ciphertext5 mykey $decPort > finaltext5
 ${echo}
 ${echo} '----------------------RESULTS-----------------------------'
 ${echo}
-${echo} 'plaintext5 contains'
-cat -A plaintext5
-${echo} 'finaltext5 contains'
-cat -A finaltext5
+# ${echo} 'plaintext5 contains'
+# cat -A plaintext5
+# ${echo} 'finaltext5 contains'
+# cat -A finaltext5
 ${echo}
-wc < plaintext5
-wc < finaltext5
+# wc < plaintext5
+# wc < finaltext5
 ${echo}
 ${echo} '#---------------------SCRIPT COMPLETE--------------------#'

@@ -5,7 +5,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#define maxchars 63999
+#define maxchars 80000
+#define maxbuffer 63000
 
 void error(const char *msg)
 {
@@ -45,6 +46,9 @@ int main(int argc, char *argv[])
 	if (listenSocketFD < 0)
 		error("ERROR opening socket");
 
+	if (setsockopt(listenSocketFD, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
+    error("setsockopt(SO_REUSEADDR) failed");
+
 	// Enable the socket to begin listening
 	// Connect socket to port
 	if (bind(listenSocketFD, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0)
@@ -81,7 +85,7 @@ whether we're the parent or the child. */
 	// Send a Success message back to the client
 	sendSuccessMessage(establishedConnectionFD);
 
-	printf("\nSERVER: Server shutting down...\n\n");
+	// printf("\nSERVER: Server shutting down...\n\n");
 
 	char encrypted[maxchars];
 	decryptFile(filestring, keystring, encrypted);
@@ -99,22 +103,65 @@ whether we're the parent or the child. */
 void receiveData(int establishedConnectionFD, char *string)
 {
 	int charsReceived;
-	char buffer[maxchars];
-	memset(buffer, '\0', maxchars);
+	char buffer[maxbuffer];
+	memset(buffer, '\0', maxbuffer);
 	memset(string, '\0', maxchars);
+	int bufferLen = 0;
+	int i = 0;
 
 	// Read the client's message from the socket
-	charsReceived = recv(establishedConnectionFD, buffer, sizeof(buffer) - 1, 0);
-
-	if (charsReceived < 0)
+	while (1)
 	{
-		error("ERROR reading from socket");
+		charsReceived = recv(establishedConnectionFD, buffer, sizeof(maxbuffer) - 1, 0);
+
+		if (charsReceived < 0)
+		{
+			error("SERVER: ERROR reading from socket");
+		}
+		// printf("current package is %s", buffer);
+
+		if (i == 0)
+		{
+			strcpy(string, buffer);
+		}
+
+		else
+		{
+			strcat(string, buffer);
+		}
+
+		bufferLen = strlen(buffer);
+		if ((buffer[bufferLen - 1]) == '\n')
+		{
+			// printf("Receiving finish!\n");
+			break;
+		}
+		memset(buffer, '\0', maxbuffer);
+		i++;
 	}
-	// printf("%s", buffer);
-	sprintf(string, "%s", buffer);
 	// printf("SERVER: I received this from the client: %s", buffer);
 	// printf("SERVER: String saved as: %s", string);
 }
+
+// void receiveData(int establishedConnectionFD, char *string)
+// {
+// 	int charsReceived;
+// 	char buffer[maxchars];
+// 	memset(buffer, '\0', maxchars);
+// 	memset(string, '\0', maxchars);
+
+// 	// Read the client's message from the socket
+// 	charsReceived = recv(establishedConnectionFD, buffer, sizeof(buffer) - 1, 0);
+
+// 	if (charsReceived < 0)
+// 	{
+// 		error("ERROR reading from socket");
+// 	}
+// 	// printf("%s", buffer);
+// 	sprintf(string, "%s", buffer);
+// 	// printf("SERVER: I received this from the client: %s", buffer);
+// 	// printf("SERVER: String saved as: %s", string);
+// }
 
 void sendSuccessMessage(int establishedConnectionFD)
 {
@@ -197,7 +244,8 @@ void decryptFile(char *file, char *key, char *encrypted)
 
 		else
 		{
-			error("SERVER: Bad input");
+			error("DEC SERVER: Bad input");
+			// currentChar = result;
 		}
 
 		encrypted[i] = currentChar;
@@ -208,6 +256,7 @@ void decryptFile(char *file, char *key, char *encrypted)
 		// printf("ciphertext: %i  \n", encrypted[i]);
 	}
 
+	encrypted[i] = '\n';
 	// to see all thevalue in temp array.
 	// printf("Final encrpyted string is: [%s]\n", encrypted);
 }

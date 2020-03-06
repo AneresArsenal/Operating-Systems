@@ -15,10 +15,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/time.h>
 #define maxchars 80000
 #define maxbuffer 63000
 
@@ -37,9 +40,19 @@ int main(int argc, char *argv[])
 {
 
 	int listenSocketFD, establishedConnectionFD, portNumber, charsRead, charsWritten;
+	int clientSocket[5],
+		maxClients = 5, i, maxFD, sd, newSocket, activity, valread;
 	socklen_t sizeOfClientInfo;
 	char buffer[maxbuffer];
 	struct sockaddr_in serverAddress, clientAddress;
+	//set of socket descriptors
+	fd_set readFDs, master;
+
+	//initialise all clientSocket[] to 0
+	for (i = 0; i < maxClients; i++)
+	{
+		clientSocket[i] = 0;
+	}
 
 	if (argc < 2)
 	{
@@ -60,6 +73,9 @@ int main(int argc, char *argv[])
 	if (listenSocketFD < 0)
 		error("ERROR opening socket");
 
+	if (setsockopt(listenSocketFD, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
+		error("setsockopt(SO_REUSEADDR) failed");
+
 	// Enable the socket to begin listening
 	// Connect socket to port
 	if (bind(listenSocketFD, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0)
@@ -72,18 +88,60 @@ int main(int argc, char *argv[])
 	listen(listenSocketFD, 5); // Flip the socket on - it can now receive up to 5 connections
 
 	// Accept a connection, blocking if one is not available until one connects
-	sizeOfClientInfo = sizeof(clientAddress);																// Get the size of the address for the client that will connect
-	establishedConnectionFD = accept(listenSocketFD, (struct sockaddr *)&clientAddress, &sizeOfClientInfo); // Accept
-	if (establishedConnectionFD < 0)
-	{
-		error("ERROR on accept");
-	}
+	// sizeOfClientInfo = sizeof(clientAddress);
 
-	/* Fork to create a process for this client and perform a test to see
-whether we're the parent or the child. */
+	// pid_t spawnPid;
+	// spawnPid = fork();
+	// establishedConnectionFD = accept(listenSocketFD, (struct sockaddr *)&clientAddress, &sizeOfClientInfo); // Accept
+	// if (establishedConnectionFD < 0)
+	// {
+	// 	error("ERROR on accept");
+	// }
 
-	printf("SERVER: Connected client at port %d\n", ntohs(clientAddress.sin_port));
+	// switch (spawnPid)
+	// {
 
+	// // fork is unsuccsessful
+	// case -1:
+	// {
+	// 	perror("Hull Breach!\n");
+	// 	close(establishedConnectionFD);
+	// 	exit(1);
+	// 	break;
+	// }
+
+	// // fork is successful, child is running
+	// case 0:
+	// {
+	// 	char filestring[maxchars];
+	// 	receiveData(establishedConnectionFD, filestring);
+	// 	sendSuccessMessage(establishedConnectionFD);
+	// 	char keystring[maxchars];
+	// 	receiveData(establishedConnectionFD, keystring);
+	// 	sendSuccessMessage(establishedConnectionFD);
+	// 	char encrypted[maxchars];
+	// 	encryptFile(filestring, keystring, encrypted);
+	// 	sendData(establishedConnectionFD, encrypted);
+	// 	close(establishedConnectionFD);
+	// 	break;
+	// }
+
+	// // handle child case
+	// default:
+	// {
+	// 	printf("Executing background process %d\n", spawnPid);
+	// 	// close(establishedConnectionFD);
+	// }
+	// }
+
+	// Get the size of the address for the client that will connect
+
+	// printf("SERVER: Connected client at port %d\n", ntohs(clientAddress.sin_port));
+
+	// Accept a connection, blocking if one is not available until one connects
+	sizeOfClientInfo = sizeof(clientAddress);
+
+	establishedConnectionFD = accept(listenSocketFD, (struct sockaddr *)&clientAddress, &sizeOfClientInfo);
 	char filestring[maxchars];
 	receiveData(establishedConnectionFD, filestring);
 
@@ -91,7 +149,6 @@ whether we're the parent or the child. */
 	sendSuccessMessage(establishedConnectionFD);
 
 	char keystring[maxchars];
-
 	receiveData(establishedConnectionFD, keystring);
 
 	// printf("File string is %s\n", filestring);
@@ -188,8 +245,6 @@ void sendData(int establishedConnectionFD, char *encryptedFile)
 		error("ERROR writing to socket");
 	if (charsWritten < strlen(encryptedFile))
 		error("ENC CLIENT: WARNING: Not all data written to socket!");
-
-	
 }
 
 void encryptFile(char *file, char *key, char *encrypted)
@@ -242,9 +297,9 @@ void encryptFile(char *file, char *key, char *encrypted)
 		}
 		else
 		{
-			printf("ENC SERVER: Error found!\n");
-			currentChar = result;
-			// error("SERVER: Bad input");
+			// printf("ENC SERVER: Error found!\n");
+			// currentChar = result;
+			error("SERVER: Bad input");
 		}
 
 		encrypted[i] = currentChar;

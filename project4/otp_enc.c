@@ -8,6 +8,7 @@
 #include <netdb.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <signal.h>
 
 // global variables
 #define maxchars 80000
@@ -18,7 +19,7 @@ int countKey;
 void error(const char *msg)
 {
 	perror(msg);
-	exit(0);
+	exit(1);
 } // Error function used for reporting issues
 
 void receiveData(int socketFD, char *string, int flag);
@@ -27,8 +28,25 @@ int checkLength(char file[], char key[]);
 void readFile(char filepath[], char *array, char *array2);
 void checkString(char *string);
 
+void my_handler(int s)
+{
+	if (s == 1)
+	{
+		// printf("Caught signal %d\n", s);
+		exit(1);
+	}
+}
+
 int main(int argc, char *argv[])
 {
+	struct sigaction sigIntHandler;
+
+	sigIntHandler.sa_handler = my_handler;
+	sigemptyset(&sigIntHandler.sa_mask);
+	sigIntHandler.sa_flags = 0;
+
+	sigaction(SIGINT, &sigIntHandler, NULL);
+
 	int socketFD, portNumber, charsWritten, charsRead;
 	struct sockaddr_in serverAddress;
 	struct hostent *serverHostInfo;
@@ -84,6 +102,9 @@ int main(int argc, char *argv[])
 	if (socketFD < 0)
 		error("ENC CLIENT: ERROR opening socket");
 
+	if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
+		error("setsockopt(SO_REUSEADDR) failed");
+
 	// Connect to server
 	if (connect(socketFD, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0) // Connect socket to address
 		error("ENC CLIENT: ERROR connecting");
@@ -91,7 +112,7 @@ int main(int argc, char *argv[])
 	sendData(socketFD, filestring);
 
 	// Get return message from server
-	
+
 	char message[maxchars];
 	receiveData(socketFD, message, 0);
 
@@ -310,10 +331,12 @@ void checkString(char *string)
 
 		if ((currentChar < 'A' || currentChar > 'Z') && currentChar != 32)
 		{
-			printf("Position %i Current char is %c with value %i\n", i, string[i], string[i]);
-			// printf("Error found!");
-
 			printf("ENC CLIENT: input contains bad characters\n");
+			exit(1);
+			// printf("Position %i Current char is %c with value %i\n", i, string[i], string[i]);
+			// // printf("Error found!");
+
+			// printf("ENC CLIENT: input contains bad characters\n");
 		}
 	}
 }
