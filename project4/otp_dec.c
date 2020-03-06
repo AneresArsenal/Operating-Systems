@@ -182,7 +182,7 @@ int checkLength(char filepath[], char key[])
 	}
 	else
 	{
-		error("key is too short");
+		error("DEC CLIENT: key is too short");
 		return -1;
 	}
 
@@ -250,7 +250,7 @@ void checkString(char *string)
 			printf("Position %i Current char is %c with value %i\n", i, string[i], string[i]);
 			// printf("Error found!");
 
-			error("CLIENT: input contains bad characters\n");
+			printf("DEC CLIENT: input contains bad characters\n");
 		}
 	}
 }

@@ -19,7 +19,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#define maxchars 63999
+#define maxchars 80000
+#define maxbuffer 63000
 
 void error(const char *msg)
 {
@@ -37,7 +38,7 @@ int main(int argc, char *argv[])
 
 	int listenSocketFD, establishedConnectionFD, portNumber, charsRead, charsWritten;
 	socklen_t sizeOfClientInfo;
-	char buffer[maxchars];
+	char buffer[maxbuffer];
 	struct sockaddr_in serverAddress, clientAddress;
 
 	if (argc < 2)
@@ -81,7 +82,7 @@ int main(int argc, char *argv[])
 	/* Fork to create a process for this client and perform a test to see
 whether we're the parent or the child. */
 
-	// printf("SERVER: Connected client at port %d\n", ntohs(clientAddress.sin_port));
+	printf("SERVER: Connected client at port %d\n", ntohs(clientAddress.sin_port));
 
 	char filestring[maxchars];
 	receiveData(establishedConnectionFD, filestring);
@@ -90,16 +91,24 @@ whether we're the parent or the child. */
 	sendSuccessMessage(establishedConnectionFD);
 
 	char keystring[maxchars];
+
 	receiveData(establishedConnectionFD, keystring);
+
+	// printf("File string is %s\n", filestring);
+	// printf("Key string is %s\n", keystring);
 
 	// Send a Success message back to the client
 	sendSuccessMessage(establishedConnectionFD);
 
-	printf("\nSERVER: Server shutting down...\n\n");
+	// printf("\nSERVER: Server shutting down...\n\n");
 
 	char encrypted[maxchars];
 	encryptFile(filestring, keystring, encrypted);
+	// int encryptedLen = strlen(encrypted);
+	// printf("Encrypted file length is %i\n", encryptedLen);
 	// printf("Encrypted file is %s", encrypted);
+
+	// printf("Sending encrypted file...\n");
 
 	sendData(establishedConnectionFD, encrypted);
 
@@ -113,27 +122,50 @@ whether we're the parent or the child. */
 void receiveData(int establishedConnectionFD, char *string)
 {
 	int charsReceived;
-	char buffer[maxchars];
-	memset(buffer, '\0', maxchars);
+	char buffer[maxbuffer];
+	memset(buffer, '\0', maxbuffer);
 	memset(string, '\0', maxchars);
+	int bufferLen = 0;
+	int i = 0;
 
 	// Read the client's message from the socket
-	charsReceived = recv(establishedConnectionFD, buffer, sizeof(buffer) - 1, 0);
-
-	if (charsReceived < 0)
+	while (1)
 	{
-		error("ERROR reading from socket");
+		charsReceived = recv(establishedConnectionFD, buffer, sizeof(maxbuffer) - 1, 0);
+
+		if (charsReceived < 0)
+		{
+			error("SERVER: ERROR reading from socket");
+		}
+		// printf("current package is %s", buffer);
+
+		if (i == 0)
+		{
+			strcpy(string, buffer);
+		}
+
+		else
+		{
+			strcat(string, buffer);
+		}
+
+		bufferLen = strlen(buffer);
+		if ((buffer[bufferLen - 1]) == '\n')
+		{
+			// printf("Receiving finish!\n");
+			break;
+		}
+		memset(buffer, '\0', maxbuffer);
+		i++;
 	}
-	// printf("%s", buffer);
-	sprintf(string, "%s", buffer);
 	// printf("SERVER: I received this from the client: %s", buffer);
 	// printf("SERVER: String saved as: %s", string);
 }
 
 void sendSuccessMessage(int establishedConnectionFD)
 {
-	char buffer[maxchars];
-	memset(buffer, '\0', maxchars);
+	char buffer[maxbuffer];
+	memset(buffer, '\0', maxbuffer);
 	int charsWritten;
 
 	// Send a Success message back to the client
@@ -141,7 +173,7 @@ void sendSuccessMessage(int establishedConnectionFD)
 
 	charsWritten = send(establishedConnectionFD, buffer, strlen(buffer), 0); // Send success back
 	if (charsWritten < 0)
-		error("ERROR writing to socket");
+		error("SERVER: ERROR writing to socket");
 
 	// printf("\nSERVER: Waiting for next data package....\n\n");
 }
@@ -149,28 +181,33 @@ void sendSuccessMessage(int establishedConnectionFD)
 void sendData(int establishedConnectionFD, char *encryptedFile)
 {
 	int charsWritten;
+	// printf("\nENC SERVER: Sending encrypted file....\n\n");
 
 	charsWritten = send(establishedConnectionFD, encryptedFile, strlen(encryptedFile), 0); // Send success back
 	if (charsWritten < 0)
 		error("ERROR writing to socket");
+	if (charsWritten < strlen(encryptedFile))
+		error("ENC CLIENT: WARNING: Not all data written to socket!");
 
-	// printf("\nSERVER: Waiting for next data package....\n\n");
+	
 }
 
 void encryptFile(char *file, char *key, char *encrypted)
 {
 
-	int fileLength = strlen(file) - 1;
 	int i;
 	int total;
 	int result;
 	int fileChar;
 	int keyChar;
 	char currentChar;
+	int filelength = strlen(file) - 1;
 
-	for (i = 0; i < fileLength; i++)
+	// printf("File string is %s\n", file);
+	// printf("Key string is %s\n", key);
+
+	for (i = 0; i < filelength; i++)
 	{
-
 		if (file[i] != 32)
 		{
 			fileChar = file[i] - 64;
@@ -191,15 +228,10 @@ void encryptFile(char *file, char *key, char *encrypted)
 
 		total = fileChar + keyChar;
 
-		// if (total > 26)
-		// {
-		// 	total = total - 26;
-		// }
 		result = total % 26;
 
 		result = result + 64;
 
-		// strncat(temp, &currentChar, sizeof(currentChar));
 		if (result == 64)
 		{
 			currentChar = 32;
@@ -208,19 +240,26 @@ void encryptFile(char *file, char *key, char *encrypted)
 		{
 			currentChar = result;
 		}
-
 		else
 		{
-			error("SERVER: Bad input");
+			printf("ENC SERVER: Error found!\n");
+			currentChar = result;
+			// error("SERVER: Bad input");
 		}
 
 		encrypted[i] = currentChar;
-		// printf("Char %i   ", i);
-		// printf("message: %i   ", fileChar);
-		// printf("key: %i   ", keyChar);
-		// printf("message + key: %i   ", total);
-		// printf("ciphertext: %i  \n", encrypted[i]);
+
+		// 	// if (i > 5300 && i < 5400)
+		// 	// {
+		// 	// 	printf("Pos: %i  ", i);
+		// 	// 	printf("message:  %i   ",fileChar);
+		// 	// 	printf("key: %i   ", keyChar);
+		// 	// 	printf("m + k: %i   ", total);
+		// 	// 	printf("result: %i  \n", encrypted[i]);
+		// 	// }
 	}
+
+	encrypted[i] = '\n';
 
 	// to see all thevalue in temp array.
 	// printf("Final encrpyted string is: [%s]\n", encrypted);

@@ -2,6 +2,9 @@
 #use the standard version of echo
 echo=/bin/echo
 
+encPort=$(( $RANDOM % 2000 + 1000 ))
+decPort=$(( $RANDOM % 2000 + 5000 ))
+
 ${echo} '#---------------------TESTSCRIPT STARTS--------------------#'
 ${echo}
 ${echo}
@@ -10,12 +13,12 @@ ${echo} '-------------------PLAINTEXT1----------------------------'
 ${echo}
 ${echo}
 keygen 50 > mykey
-otp_enc_d 23232 &
-otp_enc plaintext1 mykey 23232 > ciphertext1
+otp_enc_d $encPort &
+otp_enc plaintext1 mykey $encPort > ciphertext1
 ${echo}
 ${echo}
-otp_dec_d 67676 &
-otp_dec ciphertext1 mykey 67676 > finaltext1
+otp_dec_d $decPort &
+otp_dec ciphertext1 mykey $decPort > finaltext1
 ${echo}
 ${echo} '----------------------RESULTS-----------------------------'
 ${echo}
@@ -27,16 +30,18 @@ ${echo}
 wc < plaintext1
 wc < finaltext1
 ${echo}
+encPort=$(( $RANDOM % 2000 + 1000 ))
+decPort=$(( $RANDOM % 2000 + 5000 ))
 ${echo} '-------------------PLAINTEXT2----------------------------'
 ${echo}
 ${echo}
 keygen 350 > mykey
-otp_enc_d 23232 &
-otp_enc plaintext2 mykey 23232 > ciphertext2
+otp_enc_d $encPort &
+otp_enc plaintext2 mykey $encPort > ciphertext2
 ${echo}
 ${echo}
-otp_dec_d 67676 &
-otp_dec ciphertext2 mykey 67676 > finaltext2
+otp_dec_d $decPort &
+otp_dec ciphertext2 mykey $decPort > finaltext2
 ${echo}
 ${echo} '----------------------RESULTS-----------------------------'
 ${echo}
@@ -48,16 +53,18 @@ ${echo}
 wc < plaintext2
 wc < finaltext2
 ${echo}
+encPort=$(( $RANDOM % 2000 + 1000 ))
+decPort=$(( $RANDOM % 2000 + 5000 ))
 ${echo} '-------------------PLAINTEXT3----------------------------'
 ${echo}
 ${echo}
 keygen 50 > mykey
-otp_enc_d 23232 &
-otp_enc plaintext3 mykey 23232 > ciphertext3
+otp_enc_d $encPort &
+otp_enc plaintext3 mykey $encPort > ciphertext3
 ${echo}
 ${echo}
-otp_dec_d 67676 &
-otp_dec ciphertext3 mykey 67676 > finaltext3
+otp_dec_d $decPort &
+otp_dec ciphertext3 mykey $decPort > finaltext3
 ${echo}
 ${echo} '----------------------RESULTS-----------------------------'
 ${echo}
@@ -69,15 +76,17 @@ ${echo}
 wc < plaintext3
 wc < finaltext3
 ${echo}
+encPort=$(( $RANDOM % 2000 + 1000 ))
+decPort=$(( $RANDOM % 2000 + 5000 ))
 ${echo} '-------------------PLAINTEXT5----------------------------'
 ${echo}
 ${echo}
-otp_enc_d 23232 &
-otp_enc plaintext5 mykey 23232 > ciphertext5
+otp_enc_d $encPort &
+otp_enc plaintext5 mykey $encPort > ciphertext5
 ${echo}
 ${echo}
-otp_dec_d 67676 &
-otp_dec ciphertext5 mykey 67676 > finaltext5
+otp_dec_d $decPort &
+otp_dec ciphertext5 mykey $decPort > finaltext5
 ${echo}
 ${echo} '----------------------RESULTS-----------------------------'
 ${echo}

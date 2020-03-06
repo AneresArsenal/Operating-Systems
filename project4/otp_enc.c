@@ -10,7 +10,8 @@
 #include <fcntl.h>
 
 // global variables
-#define maxchars 63999
+#define maxchars 80000
+#define maxbuffer 63000
 int countFile;
 int countKey;
 
@@ -23,7 +24,7 @@ void error(const char *msg)
 void receiveData(int socketFD, char *string, int flag);
 void sendData(int socketFD, char *string);
 int checkLength(char file[], char key[]);
-void readFile(char filepath[], char *array);
+void readFile(char filepath[], char *array, char *array2);
 void checkString(char *string);
 
 int main(int argc, char *argv[])
@@ -32,18 +33,6 @@ int main(int argc, char *argv[])
 	struct sockaddr_in serverAddress;
 	struct hostent *serverHostInfo;
 	char buffer[maxchars];
-
-	int counter;
-	// printf("Program Name Is: %s", argv[0]);
-	// if (argc == 1)
-	// 	printf("\nNo Extra Command Line Argument Passed Other Than Program Name");
-	// if (argc >= 2)
-	// {
-	// 	printf("\nNumber Of Arguments Passed: %d", argc);
-	// 	printf("\n----Following Are The Command Line Arguments Passed----\n");
-	// 	for (counter = 0; counter < argc; counter++)
-	// 		printf("argv[%d]: %s\n", counter, argv[counter]);
-	// }
 
 	if (argc != 4)
 	{
@@ -57,12 +46,24 @@ int main(int argc, char *argv[])
 	}
 
 	char filestring[maxchars], keystring[maxchars];
+	char filestring2[maxchars], keystring2[maxchars];
 	memset(filestring, '\0', sizeof(filestring));
 	memset(keystring, '\0', sizeof(keystring));
+	memset(filestring2, '\0', sizeof(filestring2));
+	memset(keystring2, '\0', sizeof(keystring2));
 
-	readFile(argv[1], filestring);
+	readFile(argv[1], filestring, filestring2);
+
 	checkString(filestring);
-	readFile(argv[2], keystring);
+
+	readFile(argv[2], keystring, keystring2);
+
+	int fileLen, keyLen;
+	fileLen = strlen(filestring);
+	keyLen = strlen(keystring);
+
+	// printf("File string length is %i, content is \n%s\n", fileLen, filestring);
+	// printf("Key string length is %i, content is \n%s\n", keyLen, keystring);
 
 	// Set up the server address struct
 	memset((char *)&serverAddress, '\0', sizeof(serverAddress)); // Clear out the address struct
@@ -73,7 +74,7 @@ int main(int argc, char *argv[])
 
 	if (serverHostInfo == NULL)
 	{
-		fprintf(stderr, "CLIENT: ERROR, no such host\n");
+		fprintf(stderr, "ENC CLIENT: ERROR, no such host\n");
 		exit(0);
 	}
 	memcpy((char *)&serverAddress.sin_addr.s_addr, (char *)serverHostInfo->h_addr, serverHostInfo->h_length); // Copy in the address
@@ -81,15 +82,16 @@ int main(int argc, char *argv[])
 	// Set up the socket
 	socketFD = socket(AF_INET, SOCK_STREAM, 0); // Create the socket
 	if (socketFD < 0)
-		error("CLIENT: ERROR opening socket");
+		error("ENC CLIENT: ERROR opening socket");
 
 	// Connect to server
 	if (connect(socketFD, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0) // Connect socket to address
-		error("CLIENT: ERROR connecting");
+		error("ENC CLIENT: ERROR connecting");
 
 	sendData(socketFD, filestring);
 
 	// Get return message from server
+	
 	char message[maxchars];
 	receiveData(socketFD, message, 0);
 
@@ -98,7 +100,7 @@ int main(int argc, char *argv[])
 	// Get return message from server
 	receiveData(socketFD, message, 0);
 
-	sendData(socketFD, "Waiting for encrypted file now...\n");
+	// sendData(socketFD, "Waiting for encrypted file now...\n");
 
 	receiveData(socketFD, message, 1);
 
@@ -109,24 +111,71 @@ int main(int argc, char *argv[])
 void receiveData(int socketFD, char *string, int flag)
 {
 	int charsReceived;
-	char buffer[maxchars];
-	memset(buffer, '\0', maxchars);
+	char buffer[maxbuffer];
+	memset(buffer, '\0', maxbuffer);
 	memset(string, '\0', maxchars);
+	int bufferLen = 0;
+	int i = 0;
 
-	// Read the client's message from the socket
-	charsReceived = recv(socketFD, buffer, sizeof(buffer) - 1, 0);
-
-	if (charsReceived < 0)
+	while (1)
 	{
-		error("ERROR reading from socket");
+		charsReceived = recv(socketFD, buffer, sizeof(buffer) - 1, 0);
+
+		if (charsReceived < 0)
+		{
+			error("ENC CLIENT: ERROR reading from socket");
+		}
+		// printf("current package is %s\n", buffer);
+
+		if (i == 0)
+		{
+			sprintf(string, "%s", buffer);
+		}
+
+		else
+		{
+			strcat(string, buffer);
+		}
+
+		bufferLen = strlen(buffer);
+		if ((buffer[bufferLen - 1]) == '\n')
+		{
+			// printf("Receiving finish!\n");
+			break;
+		}
+		memset(buffer, '\0', maxbuffer);
+		i++;
 	}
-	
-	sprintf(string, "%s", buffer);
+
 	if (flag == 1)
 	{
-		printf("%s\n", buffer);
+		printf("%s", string);
 	}
 }
+
+// void receiveData(int socketFD, char *string, int flag)
+// {
+// 	int charsReceived;
+// 	char buffer[maxchars];
+// 	memset(buffer, '\0', maxchars);
+// 	memset(string, '\0', maxchars);
+// 	int bufferLen = 0;
+// 	int i = 0;
+
+// 	// Read the client's message from the socket
+// 	charsReceived = recv(socketFD, buffer, sizeof(buffer) - 1, 0);
+
+// 	if (charsReceived < 0)
+// 	{
+// 		error("ENC CLIENT: ERROR reading from socket");
+// 	}
+
+// 	sprintf(string, "%s", buffer);
+// 	if (flag == 1)
+// 	{
+// 		printf("%s\n", buffer);
+// 	}
+// }
 
 void sendData(int socketFD, char *string)
 {
@@ -136,9 +185,9 @@ void sendData(int socketFD, char *string)
 
 	charsWritten = send(socketFD, string, strlen(string), 0);
 	if (charsWritten < 0)
-		error("CLIENT: ERROR writing to socket");
+		error("ENC CLIENT: ERROR writing to socket");
 	if (charsWritten < strlen(string))
-		error("CLIENT: WARNING: Not all data written to socket!");
+		error("ENC CLIENT: WARNING: Not all data written to socket!");
 }
 
 int checkLength(char filepath[], char key[])
@@ -194,21 +243,21 @@ int checkLength(char filepath[], char key[])
 	}
 	else
 	{
-		error("key is too short");
+		error("ENC CLIENT: key is too short");
 		return -1;
 	}
 
 	return 0;
 }
 
-void readFile(char filepath[], char array[maxchars])
+void readFile(char filepath[], char *array, char *array2)
 {
 	int i = 0;
 	int file_descriptor;
 	char line[maxchars];
 	ssize_t nread, nwritten;
 	char readBuffer[maxchars];
-	char *ptr = readBuffer;
+	// int length = 0;
 
 	memset(readBuffer, '\0', maxchars);
 	memset(line, '\0', maxchars);
@@ -236,6 +285,8 @@ void readFile(char filepath[], char array[maxchars])
 		{
 			strcat(array, line);
 		}
+
+		// length = length + strlen(line);
 		i++;
 		// printf("Current line: %s\n", line);
 	}
@@ -246,7 +297,6 @@ void readFile(char filepath[], char array[maxchars])
 	// printf("Final string is %s", readBuffer);
 	// sprintf(array, "%s", readBuffer);
 }
-
 
 void checkString(char *string)
 {
@@ -263,7 +313,7 @@ void checkString(char *string)
 			printf("Position %i Current char is %c with value %i\n", i, string[i], string[i]);
 			// printf("Error found!");
 
-			error("CLIENT: input contains bad characters\n");
+			printf("ENC CLIENT: input contains bad characters\n");
 		}
 	}
 }
