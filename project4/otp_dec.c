@@ -26,6 +26,7 @@ void sendData(int socketFD, char *string);
 int checkLength(char file[], char key[]);
 void readFile(char filepath[], char *array);
 void checkString(char *string);
+int receiveHandshake(int socketFD);
 
 int main(int argc, char *argv[])
 {
@@ -71,13 +72,21 @@ int main(int argc, char *argv[])
 	socketFD = socket(AF_INET, SOCK_STREAM, 0); // Create the socket
 	if (socketFD < 0)
 		error("CLIENT: ERROR opening socket");
-	
+
 	if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
 		error("setsockopt(SO_REUSEADDR) failed");
 
 	// Connect to server
 	if (connect(socketFD, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0) // Connect socket to address
 		error("CLIENT: ERROR connecting");
+
+	// perform handshake with server
+	// printf("CLIENT: sending handshake now...\n");
+	sendData(socketFD, "This is otp-enc\n");
+
+	// printf("CLIENT: receiving handshake now...\n");
+	if (receiveHandshake(socketFD) < 0)
+		error("CLIENT: ERROR handshake failed");
 
 	// printf("sending file string now...\n");
 	sendData(socketFD, filestring);
@@ -146,6 +155,56 @@ void receiveData(int socketFD, char *string, int flag)
 	}
 }
 
+int receiveHandshake(int establishedConnectionFD)
+{
+	int charsReceived;
+	char buffer[maxbuffer];
+	char string[maxbuffer];
+	memset(buffer, '\0', maxbuffer);
+	memset(string, '\0', maxbuffer);
+	int bufferLen = 0;
+	int i = 0;
+
+	// Read the client's message from the socket
+
+	while (1)
+	{
+
+		charsReceived = recv(establishedConnectionFD, buffer, sizeof(maxbuffer) - 1, 0);
+
+		if (charsReceived < 0)
+		{
+			error("CLIENT: ERROR reading from socket");
+		}
+
+		if (i == 0)
+		{
+			sprintf(string, "%s", buffer);
+		}
+
+		else
+		{
+			strcat(string, buffer);
+		}
+
+		bufferLen = strlen(buffer);
+		if ((buffer[bufferLen - 1]) == '\n')
+		{
+			// printf("Receiving finish!\n");
+			break;
+		}
+		memset(buffer, '\0', maxbuffer);
+		i++;
+	}
+	// printf("SERVER: Handshake received is %s\n", buffer);
+
+	if (strcmp(string, "This is otp-enc-d\n") != 0)
+	{
+		return -1;
+	}
+
+	return 0;
+}
 // void receiveData(int socketFD, char *string, int flag)
 // {
 // 	int charsReceived;
@@ -301,8 +360,10 @@ void checkString(char *string)
 		{
 			printf("Position %i Current char is %c with value %i\n", i, string[i], string[i]);
 			// printf("Error found!");
+			printf("DEC CLIENT: input contains bad characters\n");
+			exit(1);
 
-			error("CLIENT: input contains bad characters\n");
+			// error("CLIENT: input contains bad characters\n");
 		}
 	}
 }

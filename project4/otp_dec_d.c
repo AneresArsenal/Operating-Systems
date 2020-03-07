@@ -5,24 +5,54 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <signal.h>
 
 // global variables
 #define maxchars 80000
 #define maxbuffer 63000
+int PIDCount = 0;
 
 void error(const char *msg)
 {
 	perror(msg);
-	exit(1);
+	exit(0);
 } // Error function used for reporting issues
 
 void receiveData(int establishedConnectionFD, char *string);
 void sendSuccessMessage(int establishedConnectionFD);
 void sendData(int establishedConnectionFD, char *encryptedFile);
 void decryptFile(char *file, char *key, char *encrypted);
+int receiveHandshake(int establishedConnectionFD);
+void forkNewProcess(socklen_t sizeOfClientInfo, int establishedConnectionFD, int listenSocketFD, struct sockaddr_in clientAddress);
+
+int updatePIDCount(int flag);
+
+void CATCHsigint(int signal)
+{
+	int childExitMethod = -5;
+
+	pid_t spawnid = waitpid(0, &childExitMethod, WNOHANG);
+	if (spawnid > 0)
+	{
+		// checkExitStatus(childExitMethod);
+		write(STDOUT_FILENO, "Child process terminated!\n: ", 26);
+
+		updatePIDCount(-1);
+	}
+}
 
 int main(int argc, char *argv[])
 {
+	// initialize signal handlers
+	// initialize or reset the signal set to sa_mask
+	// set to restart flag to tell system calls to automatically restart
+	// specifies an alternative signal handler function to be called
+
+	struct sigaction SIGINT_action = {{0}};
+	SIGINT_action.sa_handler = CATCHsigint;
+	sigfillset(&SIGINT_action.sa_mask);
+	SIGINT_action.sa_flags = SA_RESTART;
+	sigaction(SIGINT, &SIGINT_action, NULL);
 
 	int listenSocketFD, establishedConnectionFD, portNumber, charsRead, charsWritten;
 	socklen_t sizeOfClientInfo;
@@ -63,12 +93,80 @@ int main(int argc, char *argv[])
 	listen(listenSocketFD, 5); // Flip the socket on - it can now receive up to 5 connections
 
 	// Accept a connection, blocking if one is not available until one connects
-	sizeOfClientInfo = sizeof(clientAddress);																// Get the size of the address for the client that will connect
+	sizeOfClientInfo = sizeof(clientAddress);
+	pid_t spawnPid = -1;
+	int childExitMethod = -1;
+
+	// while (1)
+	// {
+
+	// 	if (PIDCount < 6)
+	// 	{
+	// 		establishedConnectionFD = accept(listenSocketFD, (struct sockaddr *)&clientAddress, &sizeOfClientInfo); // Accept
+	// 		if (establishedConnectionFD < 0)
+	// 		{
+	// 			error("ERROR on accept");
+	// 		}
+	// 		else if (establishedConnectionFD > -1)
+	// 		{
+	// 			spawnPid = fork();
+	// 		}
+	// 	}
+	// 	else
+	// 	{
+	// 		printf("Kinda busy right now...\n");
+	// 		waitpid(0, &childExitMethod, 0);
+	// 	}
+
+	// 	switch (spawnPid)
+	// 	{
+
+	// 	// fork is unsuccsessful
+	// 	case -1:
+	// 	{
+	// 		perror("Hull Breach!\n");
+	// 		exit(1);
+	// 		break;
+	// 	}
+
+	// 	// fork is successful, child is running
+	// 	case 0:
+	// 	{
+	// 		printf("DEC SERVER: Daemon child created!\n");
+	// 		forkNewProcess(sizeOfClientInfo, establishedConnectionFD, listenSocketFD, clientAddress);
+	// 		break;
+	// 	}
+	// 	default:
+	// 	{
+
+	// 		updatePIDCount(1);
+	// 		waitpid(spawnPid, &childExitMethod, WNOHANG);
+	// 	}
+	// 	}
+	// }
+
+	forkNewProcess(sizeOfClientInfo, establishedConnectionFD, listenSocketFD, clientAddress);
+
+	close(listenSocketFD); // Close the listening socket
+
+	return 0;
+}
+void forkNewProcess(socklen_t sizeOfClientInfo, int establishedConnectionFD, int listenSocketFD, struct sockaddr_in clientAddress)
+{
+	// Get the size of the address for the client that will connect
 	establishedConnectionFD = accept(listenSocketFD, (struct sockaddr *)&clientAddress, &sizeOfClientInfo); // Accept
 	if (establishedConnectionFD < 0)
 	{
 		error("ERROR on accept");
 	}
+
+	// perform handshake with client
+	if (receiveHandshake(establishedConnectionFD) < 0)
+		error("SERVER: ERROR handshake failed");
+
+	sendData(establishedConnectionFD, "This is otp-enc-d\n");
+
+	printf("SERVER: Both handshakes successful\n");
 
 	/* Fork to create a process for this client and perform a test to see
 whether we're the parent or the child. */
@@ -102,12 +200,7 @@ whether we're the parent or the child. */
 	sendData(establishedConnectionFD, encrypted);
 
 	close(establishedConnectionFD); // Close the existing socket which is connected to the client
-
-	close(listenSocketFD); // Close the listening socket
-
-	return 0;
 }
-
 
 void receiveData(int establishedConnectionFD, char *string)
 {
@@ -152,6 +245,56 @@ void receiveData(int establishedConnectionFD, char *string)
 	// printf("SERVER: String saved as: %s", string);
 }
 
+int receiveHandshake(int establishedConnectionFD)
+{
+	int charsReceived;
+	char buffer[maxbuffer];
+	char string[maxbuffer];
+	memset(buffer, '\0', maxbuffer);
+	memset(string, '\0', maxbuffer);
+	int bufferLen = 0;
+	int i = 0;
+
+	// Read the client's message from the socket
+
+	while (1)
+	{
+
+		charsReceived = recv(establishedConnectionFD, buffer, sizeof(maxbuffer) - 1, 0);
+
+		if (charsReceived < 0)
+		{
+			error("SERVER: ERROR reading from socket");
+		}
+
+		if (i == 0)
+		{
+			sprintf(string, "%s", buffer);
+		}
+
+		else
+		{
+			strcat(string, buffer);
+		}
+
+		bufferLen = strlen(buffer);
+		if ((buffer[bufferLen - 1]) == '\n')
+		{
+			// printf("Receiving finish!\n");
+			break;
+		}
+		memset(buffer, '\0', maxbuffer);
+		i++;
+	}
+	// printf("SERVER: Handshake received is %s\n", buffer);
+
+	if (strcmp(string, "This is otp-enc\n") != 0)
+	{
+		return -1;
+	}
+
+	return 0;
+}
 
 // void receiveData(int establishedConnectionFD, char *string)
 // {
@@ -186,7 +329,7 @@ void sendSuccessMessage(int establishedConnectionFD)
 	if (charsWritten < 0)
 		error("ERROR writing to socket");
 
-	printf("\nSERVER: Waiting for next data package....\n\n");
+	// printf("\nSERVER: Waiting for next data package....\n\n");
 }
 
 void sendData(int establishedConnectionFD, char *encryptedFile)
@@ -197,7 +340,7 @@ void sendData(int establishedConnectionFD, char *encryptedFile)
 	if (charsWritten < 0)
 		error("ERROR writing to socket");
 
-	printf("\nSERVER: Waiting for next data package....\n\n");
+	// printf("\nSERVER: Waiting for next data package....\n\n");
 }
 
 void decryptFile(char *file, char *key, char *encrypted)
@@ -254,7 +397,8 @@ void decryptFile(char *file, char *key, char *encrypted)
 
 		else
 		{
-			error("SERVER: Bad input");
+			printf("DEC SERVER: Bad input\n");
+			exit(-1);
 		}
 
 		encrypted[i] = currentChar;
@@ -270,6 +414,35 @@ void decryptFile(char *file, char *key, char *encrypted)
 	// to see all thevalue in temp array.
 	// printf("Final encrpyted string is: [%s]\n", encrypted);
 }
+
+int updatePIDCount(int flag)
+{
+
+	// flag 0	 - check
+	// flag 1	 - add
+	// flag -1	 - minus
+	if (flag == 0)
+	{
+		if (PIDCount == 5)
+		{
+			//maxed out
+			return -1;
+		}
+		return 0;
+	}
+	else if (flag == 1)
+	{
+		PIDCount++;
+	}
+
+	else
+	{
+		PIDCount--;
+	}
+
+	return 0;
+}
+
 // reference
 // https://stackoverflow.com/questions/13669474/multiclient-server-using-fork
 // https://stackoverflow.com/questions/16007789/keep-socket-open-in-c
