@@ -29,7 +29,7 @@ int PIDCount = 0;
 void error(const char *msg)
 {
 	perror(msg);
-	exit(0);
+	exit(1);
 } // Error function used for reporting issues
 
 void receiveData(int establishedConnectionFD, char *string);
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
 	{
 		// perror("Hull breach: bind()");
 		// exit(1);
-		error("ERROR on binding");
+		error("ENC SERVER: ERROR on binding");
 	}
 
 	listen(listenSocketFD, 5); // Flip the socket on - it can now receive up to 5 connections
@@ -108,30 +108,31 @@ int main(int argc, char *argv[])
 	// Accept a connection, blocking if one is not available until one connects
 	// Get the size of the address for the client that will connect
 	sizeOfClientInfo = sizeof(clientAddress);
-
 	pid_t spawnPid = -1;
 	int childExitMethod = -1;
 
 	while (1)
 	{
 
-		if (PIDCount < 6)
+		// updatePIDCount(0);
+		// if (PIDCount < 6)
+		// {
+		establishedConnectionFD = accept(listenSocketFD, (struct sockaddr *)&clientAddress, &sizeOfClientInfo); // Accept
+		if (establishedConnectionFD < 0)
 		{
-			establishedConnectionFD = accept(listenSocketFD, (struct sockaddr *)&clientAddress, &sizeOfClientInfo); // Accept
-			if (establishedConnectionFD < 0)
-			{
-				error("ERROR on accept");
-			}
-			else if (establishedConnectionFD > -1){
-				spawnPid = fork();
-			}
-			
+			error("ERROR on accept");
 		}
-		else
+		else if (establishedConnectionFD > -1)
 		{
-			printf("Kinda busy right now...\n");
-			waitpid(0, &childExitMethod, 0);
+			// updatePIDCount(0);
+			spawnPid = fork();
 		}
+		// }
+		// else
+		// {
+		// printf("Kinda busy right now...\n");
+		// waitpid(0, &childExitMethod, 0);
+		// }
 
 		switch (spawnPid)
 		{
@@ -147,7 +148,7 @@ int main(int argc, char *argv[])
 		// fork is successful, child is running
 		case 0:
 		{
-			printf("Daemon child created!\n");
+			printf("ENC SERVER:Daemon child created!\n");
 			forkNewProcess(sizeOfClientInfo, establishedConnectionFD, listenSocketFD, clientAddress);
 			break;
 		}
@@ -156,10 +157,22 @@ int main(int argc, char *argv[])
 		default:
 		{
 			updatePIDCount(1);
-			waitpid(spawnPid, &childExitMethod, WNOHANG);
+			if (PIDCount < 6)
+			{
+				waitpid(spawnPid, &childExitMethod, WNOHANG);
+			}
+
+			else
+			{
+				printf("ENC SERVER: Kinda busy right now...\n");
+				waitpid(0, &childExitMethod, 0);
+			}
 		}
 		}
+
 	}
+
+	printf("Closing listening socket :( \n");
 
 	close(listenSocketFD); // Close the listening socket
 
@@ -171,11 +184,11 @@ void forkNewProcess(socklen_t sizeOfClientInfo, int establishedConnectionFD, int
 
 	// perform handshake with client
 	if (receiveHandshake(establishedConnectionFD) < 0)
-		error("SERVER: ERROR handshake failed");
+		error("ENC SERVER: ERROR handshake failed");
 
 	sendData(establishedConnectionFD, "This is otp-enc-d\n");
 
-	printf("SERVER: Both handshakes successful\n");
+	// printf("SERVER: Both handshakes successful\n");
 
 	// printf("SERVER: Connected client at port %d\n", ntohs(clientAddress.sin_port));
 
@@ -265,8 +278,6 @@ int receiveHandshake(int establishedConnectionFD)
 
 	while (1)
 	{
-
-		updatePIDCount(0);
 		charsReceived = recv(establishedConnectionFD, buffer, sizeof(maxbuffer) - 1, 0);
 
 		if (charsReceived < 0)
@@ -433,21 +444,24 @@ int updatePIDCount(int flag)
 		if (PIDCount == 5)
 		{
 			//maxed out
-			return -1;
+			// printf("Maxed out!\n");
+			// return -1;
 		}
 		// return 0;
 	}
 	else if (flag == 1)
 	{
+		// printf("One child added!\n");
 		PIDCount++;
 	}
 
 	else
 	{
+		// printf("One cild removed!\n");
 		PIDCount--;
 	}
 
-	printf("Current PID count is %i\n", PIDCount);
+	// printf("Current PID count is %i\n", PIDCount);
 
 	return 0;
 }

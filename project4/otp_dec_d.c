@@ -15,7 +15,7 @@ int PIDCount = 0;
 void error(const char *msg)
 {
 	perror(msg);
-	exit(0);
+	exit(1);
 } // Error function used for reporting issues
 
 void receiveData(int establishedConnectionFD, char *string);
@@ -30,7 +30,7 @@ int updatePIDCount(int flag);
 void CATCHsigint(int signal)
 {
 	int childExitMethod = -5;
-
+	
 	pid_t spawnid = waitpid(0, &childExitMethod, WNOHANG);
 	if (spawnid > 0)
 	{
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 	{
 		// perror("Hull breach: bind()");
 		// exit(1);
-		error("ERROR on binding");
+		error("DEC SERVER: ERROR on binding");
 	}
 
 	listen(listenSocketFD, 5); // Flip the socket on - it can now receive up to 5 connections
@@ -96,56 +96,69 @@ int main(int argc, char *argv[])
 	sizeOfClientInfo = sizeof(clientAddress);
 	pid_t spawnPid = -1;
 	int childExitMethod = -1;
+	while (1)
+	{
 
-	// while (1)
-	// {
+		// updatePIDCount(0);
+		// if (PIDCount < 6)
+		// {
+		establishedConnectionFD = accept(listenSocketFD, (struct sockaddr *)&clientAddress, &sizeOfClientInfo); // Accept
+		if (establishedConnectionFD < 0)
+		{
+			error("ERROR on accept");
+		}
+		else if (establishedConnectionFD > -1)
+		{
+			// updatePIDCount(0);
+			spawnPid = fork();
+		}
+		// }
+		// else
+		// {
+		// printf("Kinda busy right now...\n");
+		// waitpid(0, &childExitMethod, 0);
+		// }
 
-	// 	if (PIDCount < 6)
-	// 	{
-	// 		establishedConnectionFD = accept(listenSocketFD, (struct sockaddr *)&clientAddress, &sizeOfClientInfo); // Accept
-	// 		if (establishedConnectionFD < 0)
-	// 		{
-	// 			error("ERROR on accept");
-	// 		}
-	// 		else if (establishedConnectionFD > -1)
-	// 		{
-	// 			spawnPid = fork();
-	// 		}
-	// 	}
-	// 	else
-	// 	{
-	// 		printf("Kinda busy right now...\n");
-	// 		waitpid(0, &childExitMethod, 0);
-	// 	}
+		switch (spawnPid)
+		{
 
-	// 	switch (spawnPid)
-	// 	{
+		// fork is unsuccsessful
+		case -1:
+		{
+			perror("Hull Breach!\n");
+			exit(1);
+			break;
+		}
 
-	// 	// fork is unsuccsessful
-	// 	case -1:
-	// 	{
-	// 		perror("Hull Breach!\n");
-	// 		exit(1);
-	// 		break;
-	// 	}
+		// fork is successful, child is running
+		case 0:
+		{
+			printf("DEC SERVER: Daemon child created!\n");
+			forkNewProcess(sizeOfClientInfo, establishedConnectionFD, listenSocketFD, clientAddress);
+			break;
+		}
 
-	// 	// fork is successful, child is running
-	// 	case 0:
-	// 	{
-	// 		printf("DEC SERVER: Daemon child created!\n");
-	// 		forkNewProcess(sizeOfClientInfo, establishedConnectionFD, listenSocketFD, clientAddress);
-	// 		break;
-	// 	}
-	// 	default:
-	// 	{
+		// handle child case
+		default:
+		{
+			updatePIDCount(1);
+			if (PIDCount < 6)
+			{
+				waitpid(spawnPid, &childExitMethod, WNOHANG);
+			}
 
-	// 		updatePIDCount(1);
-	// 		waitpid(spawnPid, &childExitMethod, WNOHANG);
-	// 	}
-	// 	}
-	// }
+			else
+			{
+				printf("DEC SERVER: Kinda busy right now...\n");
+				waitpid(0, &childExitMethod, 0);
+			}
+		}
+		}
+	}
 
-	forkNewProcess(sizeOfClientInfo, establishedConnectionFD, listenSocketFD, clientAddress);
+	printf("Closing listening socket :( \n");
+
+	// forkNewProcess(sizeOfClientInfo, establishedConnectionFD, listenSocketFD, clientAddress);
 
 	close(listenSocketFD); // Close the listening socket
 
@@ -153,20 +166,14 @@ int main(int argc, char *argv[])
 }
 void forkNewProcess(socklen_t sizeOfClientInfo, int establishedConnectionFD, int listenSocketFD, struct sockaddr_in clientAddress)
 {
-	// Get the size of the address for the client that will connect
-	establishedConnectionFD = accept(listenSocketFD, (struct sockaddr *)&clientAddress, &sizeOfClientInfo); // Accept
-	if (establishedConnectionFD < 0)
-	{
-		error("ERROR on accept");
-	}
 
 	// perform handshake with client
 	if (receiveHandshake(establishedConnectionFD) < 0)
-		error("SERVER: ERROR handshake failed");
+		error("DEC SERVER: ERROR handshake failed");
 
-	sendData(establishedConnectionFD, "This is otp-enc-d\n");
+	sendData(establishedConnectionFD, "This is otp-dec-d\n");
 
-	printf("SERVER: Both handshakes successful\n");
+	// printf("SERVER: Both handshakes successful\n");
 
 	/* Fork to create a process for this client and perform a test to see
 whether we're the parent or the child. */
@@ -288,7 +295,7 @@ int receiveHandshake(int establishedConnectionFD)
 	}
 	// printf("SERVER: Handshake received is %s\n", buffer);
 
-	if (strcmp(string, "This is otp-enc\n") != 0)
+	if (strcmp(string, "This is otp-dec\n") != 0)
 	{
 		return -1;
 	}
@@ -426,19 +433,24 @@ int updatePIDCount(int flag)
 		if (PIDCount == 5)
 		{
 			//maxed out
-			return -1;
+			// printf("Maxed out!\n");
+			// return -1;
 		}
-		return 0;
+		// return 0;
 	}
 	else if (flag == 1)
 	{
+		// printf("One child added!\n");
 		PIDCount++;
 	}
 
 	else
 	{
+		// printf("One cild removed!\n");
 		PIDCount--;
 	}
+
+	// printf("Current PID count is %i\n", PIDCount);
 
 	return 0;
 }

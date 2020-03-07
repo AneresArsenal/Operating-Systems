@@ -18,7 +18,7 @@ int countKey;
 void error(const char *msg)
 {
 	perror(msg);
-	exit(0);
+	exit(1);
 } // Error function used for reporting issues
 
 void receiveData(int socketFD, char *string, int flag);
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 
 	// printf("CLIENT: receiving handshake now...\n");
 	if (receiveHandshake(socketFD) < 0)
-		error("CLIENT: ERROR handshake failed");
+		error("ENC CLIENT: ERROR handshake failed");
 
 	// printf("sending file string now...\n");
 	sendData(socketFD, filestring);
