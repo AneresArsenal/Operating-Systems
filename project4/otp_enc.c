@@ -362,10 +362,11 @@ void checkString(char *string)
 
 		if ((currentChar < 'A' || currentChar > 'Z') && currentChar != 32)
 		{
-			printf("Position %i Current char is %c with value %i\n", i, string[i], string[i]);
+			// printf("Position %i Current char is %c with value %i\n", i, string[i], string[i]);
+
 			// printf("Error found!");
-			printf("ENC CLIENT: input contains bad characters\n");
-			exit(1);
+			error("ENC CLIENT: input contains bad characters\n");
+			// exit(1);
 
 			// error("CLIENT: input contains bad characters\n");
 		}

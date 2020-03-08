@@ -2,8 +2,8 @@
 #use the standard version of echo
 echo=/bin/echo
 
-encPort=$(( $RANDOM % 2000 + 1000 ))
-decPort=$(( $RANDOM % 2000 + 5000 ))
+encPort=$(( $RANDOM % 3000 + 1000 ))
+decPort=$(( $RANDOM % 3000 + 5000 ))
 
 ${echo} '#---------------------TESTSCRIPT STARTS--------------------#'
 ${echo}
@@ -114,3 +114,10 @@ ${echo}
 # wc < finaltext5
 ${echo}
 ${echo} '#---------------------SCRIPT COMPLETE--------------------#'
+
+
+# keygen 50 > mykey
+# otp_enc_d 56789 &
+# otp_enc plaintext3 mykey 56789 > ciphertext3
+# otp_dec_d 34789 &
+# otp_dec ciphertext3 mykey 34789 > finaltext3

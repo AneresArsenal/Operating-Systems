@@ -24,35 +24,47 @@ void sendData(int establishedConnectionFD, char *encryptedFile);
 void decryptFile(char *file, char *key, char *encrypted);
 int receiveHandshake(int establishedConnectionFD);
 void forkNewProcess(socklen_t sizeOfClientInfo, int establishedConnectionFD, int listenSocketFD, struct sockaddr_in clientAddress);
-
 int updatePIDCount(int flag);
 
-void CATCHsigint(int signal)
+void catchSIGCHILD(int signo)
 {
-	int childExitMethod = -5;
-	
-	pid_t spawnid = waitpid(0, &childExitMethod, WNOHANG);
-	if (spawnid > 0)
-	{
-		// checkExitStatus(childExitMethod);
-		write(STDOUT_FILENO, "Child process terminated!\n: ", 26);
 
+	int exitStatus;
+
+	int pid = waitpid(-1, &exitStatus, WNOHANG);
+	if (pid > 0)
+	{
+		write(STDOUT_FILENO, "DEC SERVER: Child process terminated!\n", 38);
 		updatePIDCount(-1);
+	}
+
+	if (WIFEXITED(exitStatus))
+	{
+		int exitStat = WEXITSTATUS(exitStatus);
+
+		printf("DEC SERVER: Process exited with exit status %d\n", exitStat);
+		// printf("Process %d exited with exit status %d\n", lastFG, exitStat);
+		fflush(stdout);
+		if (exitStat != 0)
+		{
+			exit(exitStat);
+		}
+	}
+
+	// child process has terminated with a signal
+	else if (WIFSIGNALED(exitStatus))
+	{
+		int termSignal = WTERMSIG(exitStatus);
+
+		printf("DEC SERVER: Process was terminated by signal %i\n", termSignal);
+		// printf("Process %d was terminated by signal %i\n", lastFG, termSignal);
+		fflush(stdout);
 	}
 }
 
 int main(int argc, char *argv[])
 {
-	// initialize signal handlers
-	// initialize or reset the signal set to sa_mask
-	// set to restart flag to tell system calls to automatically restart
-	// specifies an alternative signal handler function to be called
-
-	struct sigaction SIGINT_action = {{0}};
-	SIGINT_action.sa_handler = CATCHsigint;
-	sigfillset(&SIGINT_action.sa_mask);
-	SIGINT_action.sa_flags = SA_RESTART;
-	sigaction(SIGINT, &SIGINT_action, NULL);
+	signal(SIGCHLD, catchSIGCHILD);
 
 	int listenSocketFD, establishedConnectionFD, portNumber, charsRead, charsWritten;
 	socklen_t sizeOfClientInfo;
@@ -96,28 +108,33 @@ int main(int argc, char *argv[])
 	sizeOfClientInfo = sizeof(clientAddress);
 	pid_t spawnPid = -1;
 	int childExitMethod = -1;
+
 	while (1)
 	{
 
-		// updatePIDCount(0);
-		// if (PIDCount < 6)
-		// {
 		establishedConnectionFD = accept(listenSocketFD, (struct sockaddr *)&clientAddress, &sizeOfClientInfo); // Accept
 		if (establishedConnectionFD < 0)
 		{
 			error("ERROR on accept");
 		}
-		else if (establishedConnectionFD > -1)
+		else if (establishedConnectionFD == 0)
 		{
-			// updatePIDCount(0);
-			spawnPid = fork();
+			continue;
 		}
-		// }
-		// else
-		// {
-		// printf("Kinda busy right now...\n");
-		// waitpid(0, &childExitMethod, 0);
-		// }
+		else if (establishedConnectionFD > 0)
+		{
+			updatePIDCount(0);
+			if (PIDCount < 6)
+			{
+				spawnPid = fork();
+			}
+
+			else
+			{
+				printf("DEC SERVER: Kinda busy right now...\n");
+				continue;
+			}
+		}
 
 		switch (spawnPid)
 		{
@@ -133,7 +150,7 @@ int main(int argc, char *argv[])
 		// fork is successful, child is running
 		case 0:
 		{
-			printf("DEC SERVER: Daemon child created!\n");
+			// printf("DEC SERVER:Daemon child created!\n");
 			forkNewProcess(sizeOfClientInfo, establishedConnectionFD, listenSocketFD, clientAddress);
 			break;
 		}
@@ -142,16 +159,7 @@ int main(int argc, char *argv[])
 		default:
 		{
 			updatePIDCount(1);
-			if (PIDCount < 6)
-			{
-				waitpid(spawnPid, &childExitMethod, WNOHANG);
-			}
-
-			else
-			{
-				printf("DEC SERVER: Kinda busy right now...\n");
-				waitpid(0, &childExitMethod, 0);
-			}
+			waitpid(spawnPid, &childExitMethod, WNOHANG);
 		}
 		}
 	}
@@ -360,6 +368,7 @@ void decryptFile(char *file, char *key, char *encrypted)
 	int fileChar;
 	int keyChar;
 	char currentChar;
+	memset(encrypted, '\0', maxchars);
 
 	for (i = 0; i < fileLength; i++)
 	{
@@ -404,8 +413,7 @@ void decryptFile(char *file, char *key, char *encrypted)
 
 		else
 		{
-			printf("DEC SERVER: Bad input\n");
-			exit(-1);
+			error("DEC SERVER: Bad input\n");
 		}
 
 		encrypted[i] = currentChar;
@@ -440,21 +448,20 @@ int updatePIDCount(int flag)
 	}
 	else if (flag == 1)
 	{
-		// printf("One child added!\n");
+		printf("One child added!\n");
 		PIDCount++;
 	}
 
 	else
 	{
-		// printf("One cild removed!\n");
+		printf("One cild removed!\n");
 		PIDCount--;
 	}
 
-	// printf("Current PID count is %i\n", PIDCount);
+	printf("Current PID count is %i\n", PIDCount);
 
 	return 0;
 }
-
 // reference
 // https://stackoverflow.com/questions/13669474/multiclient-server-using-fork
 // https://stackoverflow.com/questions/16007789/keep-socket-open-in-c

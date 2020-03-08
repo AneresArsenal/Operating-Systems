@@ -47,8 +47,11 @@ int main(int argc, char *argv[])
 	}
 
 	char filestring[maxchars], keystring[maxchars];
+	char filestring2[maxchars], keystring2[maxchars];
 	memset(filestring, '\0', sizeof(filestring));
 	memset(keystring, '\0', sizeof(keystring));
+	memset(filestring2, '\0', sizeof(filestring2));
+	memset(keystring2, '\0', sizeof(keystring2));
 
 	readFile(argv[1], filestring);
 	checkString(filestring);
@@ -352,18 +355,27 @@ void checkString(char *string)
 	int i;
 	char currentChar;
 
-	for (i = 0; i < length; i++)
+	if (strlen(string) == 0)
 	{
-		currentChar = string[i];
+		error("DEC CLIENT: bad input\n");
+	}
 
-		if ((currentChar < 'A' || currentChar > 'Z') && currentChar != 32)
+	else
+	{
+		for (i = 0; i < length; i++)
 		{
-			printf("Position %i Current char is %c with value %i\n", i, string[i], string[i]);
-			// printf("Error found!");
-			printf("DEC CLIENT: input contains bad characters\n");
-			exit(1);
+			currentChar = string[i];
 
-			// error("CLIENT: input contains bad characters\n");
+			if ((currentChar < 'A' || currentChar > 'Z') && currentChar != 32)
+			{
+				error("DEC CLIENT: input contains bad characters\n");
+				// printf("DEC CLIENT: Position %i Current char is [%c] with value %i\n", i, string[i], string[i]);
+				// printf("Error found!");
+				// printf("DEC CLIENT: input contains bad characters\n");
+				// exit(1);
+
+				// error("CLIENT: input contains bad characters\n");
+			}
 		}
 	}
 }
