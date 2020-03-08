@@ -1,9 +1,8 @@
-
 #use the standard version of echo
 echo=/bin/echo
 
-encPort=$(( $RANDOM % 3000 + 1000 ))
-decPort=$(( $RANDOM % 3000 + 5000 ))
+encPort=$(( $RANDOM % 5000 + 50000 ))
+decPort=$(( $RANDOM % 5000 + 50000 ))
 
 ${echo} '#---------------------TESTSCRIPT STARTS--------------------#'
 ${echo}
@@ -32,6 +31,8 @@ wc < finaltext1
 ${echo}
 ${echo} '-------------------PLAINTEXT2----------------------------'
 ${echo}
+encPort=$(( $RANDOM % 5000 + 50000 ))
+decPort=$(( $RANDOM % 5000 + 50000 ))
 ${echo}
 keygen 350 > mykey
 otp_enc_d $encPort &
@@ -53,6 +54,8 @@ wc < finaltext2
 ${echo}
 ${echo} '-------------------PLAINTEXT3----------------------------'
 ${echo}
+encPort=$(( $RANDOM % 5000 + 50000 ))
+decPort=$(( $RANDOM % 5000 + 50000 ))
 ${echo}
 keygen 50 > mykey
 otp_enc_d $encPort &
@@ -74,6 +77,8 @@ wc < finaltext3
 ${echo}
 ${echo} '-------------------PLAINTEXT4----------------------------'
 ${echo}
+encPort=$(( $RANDOM % 5000 + 50000 ))
+decPort=$(( $RANDOM % 5000 + 50000 ))
 ${echo}
 keygen 70000 > mykey
 otp_enc_d $encPort &
@@ -95,6 +100,8 @@ wc < finaltext4
 ${echo}
 ${echo} '-------------------PLAINTEXT5----------------------------'
 ${echo}
+encPort=$(( $RANDOM % 5000 + 50000 ))
+decPort=$(( $RANDOM % 5000 + 50000 ))
 ${echo}
 otp_enc_d $encPort &
 otp_enc plaintext5 mykey $encPort > ciphertext5
@@ -105,19 +112,12 @@ otp_dec ciphertext5 mykey $decPort > finaltext5
 ${echo}
 ${echo} '----------------------RESULTS-----------------------------'
 ${echo}
-# ${echo} 'plaintext5 contains'
-# cat -A plaintext5
-# ${echo} 'finaltext5 contains'
-# cat -A finaltext5
+${echo} 'plaintext5 contains'
+cat -A plaintext5
+${echo} 'finaltext5 contains'
+cat -A finaltext5
 ${echo}
-# wc < plaintext5
-# wc < finaltext5
+wc < plaintext5
+wc < finaltext5
 ${echo}
 ${echo} '#---------------------SCRIPT COMPLETE--------------------#'
-
-
-# keygen 50 > mykey
-# otp_enc_d 56789 &
-# otp_enc plaintext3 mykey 56789 > ciphertext3
-# otp_dec_d 34789 &
-# otp_dec ciphertext3 mykey 34789 > finaltext3

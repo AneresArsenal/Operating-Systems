@@ -14,9 +14,10 @@ int PIDCount = 0;
 
 void error(const char *msg)
 {
-	perror(msg);
+	// perror(msg);
+	fprintf(stderr, "%s\n", msg);
 	exit(1);
-} // Error function used for reporting issues
+}
 
 void receiveData(int establishedConnectionFD, char *string);
 void sendSuccessMessage(int establishedConnectionFD);
@@ -34,7 +35,7 @@ void catchSIGCHILD(int signo)
 	int pid = waitpid(-1, &exitStatus, WNOHANG);
 	if (pid > 0)
 	{
-		write(STDOUT_FILENO, "DEC SERVER: Child process terminated!\n", 38);
+		// write(STDOUT_FILENO, "DEC SERVER: Child process terminated!\n", 38);
 		updatePIDCount(-1);
 	}
 
@@ -42,13 +43,9 @@ void catchSIGCHILD(int signo)
 	{
 		int exitStat = WEXITSTATUS(exitStatus);
 
-		printf("DEC SERVER: Process exited with exit status %d\n", exitStat);
-		// printf("Process %d exited with exit status %d\n", lastFG, exitStat);
+		// printf("ENC SERVER: Process exited with exit status %d\n", exitStat);
 		fflush(stdout);
-		if (exitStat != 0)
-		{
-			exit(exitStat);
-		}
+		exit(exitStat);
 	}
 
 	// child process has terminated with a signal
@@ -56,8 +53,7 @@ void catchSIGCHILD(int signo)
 	{
 		int termSignal = WTERMSIG(exitStatus);
 
-		printf("DEC SERVER: Process was terminated by signal %i\n", termSignal);
-		// printf("Process %d was terminated by signal %i\n", lastFG, termSignal);
+		// printf("ENC SERVER: Process was terminated by signal %i\n", termSignal);
 		fflush(stdout);
 	}
 }
@@ -119,49 +115,61 @@ int main(int argc, char *argv[])
 		}
 		else if (establishedConnectionFD == 0)
 		{
+			close(establishedConnectionFD);
 			continue;
 		}
-		else if (establishedConnectionFD > 0)
+		else
 		{
 			updatePIDCount(0);
-			if (PIDCount < 6)
+			if (PIDCount == 5)
 			{
-				spawnPid = fork();
-			}
-
-			else
-			{
-				printf("DEC SERVER: Kinda busy right now...\n");
+				// printf("DEC SERVER: Kinda busy right now...\n");
 				continue;
 			}
-		}
+			else
+			{
+				spawnPid = fork();
+				switch (spawnPid)
+				{
 
-		switch (spawnPid)
-		{
+				// fork is unsuccsessful
+				case -1:
+				{
+					perror("Hull Breach!\n");
+					exit(1);
+					break;
+				}
 
-		// fork is unsuccsessful
-		case -1:
-		{
-			perror("Hull Breach!\n");
-			exit(1);
-			break;
-		}
+				// fork is successful, child is running
+				case 0:
+				{
+					// printf("ENC SERVER:Daemon child created!\n");
+					updatePIDCount(1);
+					forkNewProcess(sizeOfClientInfo, establishedConnectionFD, listenSocketFD, clientAddress);
+					break;
+				}
 
-		// fork is successful, child is running
-		case 0:
-		{
-			// printf("DEC SERVER:Daemon child created!\n");
-			forkNewProcess(sizeOfClientInfo, establishedConnectionFD, listenSocketFD, clientAddress);
-			break;
+				// handle child case
+				default:
+				{
+					// close(establishedConnectionFD); // Close the existing socket which is connected to the client
+					if (PIDCount == 5)
+					{
+						// printf("ENC SERVER: Kinda busy right now...\n");
+						waitpid(-1, &childExitMethod, 0);
+					}
+					else
+					{
+						waitpid(spawnPid, &childExitMethod, WNOHANG);
+					}
+					// close(establishedConnectionFD); // Close the existing socket which is connected to the client
+					// waitpid(spawnPid, &childExitMethod, WNOHANG);
+					// close(establishedConnectionFD);
+				}
+				}
+			}
 		}
-
-		// handle child case
-		default:
-		{
-			updatePIDCount(1);
-			waitpid(spawnPid, &childExitMethod, WNOHANG);
-		}
-		}
+		close(establishedConnectionFD);
 	}
 
 	printf("Closing listening socket :( \n");
@@ -177,7 +185,11 @@ void forkNewProcess(socklen_t sizeOfClientInfo, int establishedConnectionFD, int
 
 	// perform handshake with client
 	if (receiveHandshake(establishedConnectionFD) < 0)
-		error("DEC SERVER: ERROR handshake failed");
+	{
+		printf("ENC SERVER: ERROR handshake failed\n");
+		sendData(establishedConnectionFD, "handshake failed\n");
+		exit(2);
+	}
 
 	sendData(establishedConnectionFD, "This is otp-dec-d\n");
 
@@ -448,17 +460,17 @@ int updatePIDCount(int flag)
 	}
 	else if (flag == 1)
 	{
-		printf("One child added!\n");
+		// printf("DEC SERVER: One child added!\n");
 		PIDCount++;
 	}
 
 	else
 	{
-		printf("One cild removed!\n");
+		// printf("DEC SERVER: One cild removed!\n");
 		PIDCount--;
 	}
 
-	printf("Current PID count is %i\n", PIDCount);
+	// printf("DEC SERVER: Current PID count is %i\n", PIDCount);
 
 	return 0;
 }

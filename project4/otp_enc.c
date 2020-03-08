@@ -17,9 +17,10 @@ int countKey;
 
 void error(const char *msg)
 {
-	perror(msg);
+	// perror(msg);
+	fprintf(stderr, "%s\n",msg);
 	exit(1);
-} // Error function used for reporting issues
+}
 
 void receiveData(int socketFD, char *string, int flag);
 void sendData(int socketFD, char *string);
@@ -77,8 +78,8 @@ int main(int argc, char *argv[])
 	if (socketFD < 0)
 		error("CLIENT: ERROR opening socket");
 
-	if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
-		error("setsockopt(SO_REUSEADDR) failed");
+	// if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
+	// 	error("setsockopt(SO_REUSEADDR) failed");
 
 	// Connect to server
 	if (connect(socketFD, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0) // Connect socket to address
@@ -90,7 +91,11 @@ int main(int argc, char *argv[])
 
 	// printf("CLIENT: receiving handshake now...\n");
 	if (receiveHandshake(socketFD) < 0)
-		error("ENC CLIENT: ERROR handshake failed");
+	{
+		printf("ENC CLIENT: ERROR handshake failed");
+		exit(2);
+	}
+		
 
 	// printf("sending file string now...\n");
 	sendData(socketFD, filestring);
@@ -356,19 +361,27 @@ void checkString(char *string)
 	int i;
 	char currentChar;
 
-	for (i = 0; i < length; i++)
+	if (strlen(string) == 0)
 	{
-		currentChar = string[i];
+		error("ENC CLIENT: bad input\n");
+	}
 
-		if ((currentChar < 'A' || currentChar > 'Z') && currentChar != 32)
+	else
+	{
+		for (i = 0; i < length; i++)
 		{
-			// printf("Position %i Current char is %c with value %i\n", i, string[i], string[i]);
+			currentChar = string[i];
 
-			// printf("Error found!");
-			error("ENC CLIENT: input contains bad characters\n");
-			// exit(1);
+			if ((currentChar < 'A' || currentChar > 'Z') && currentChar != 32)
+			{
+				// printf("Position %i Current char is %c with value %i\n", i, string[i], string[i]);
 
-			// error("CLIENT: input contains bad characters\n");
+				// printf("Error found!");
+				error("ENC CLIENT: input contains bad characters\n");
+				// exit(1);
+
+				// error("CLIENT: input contains bad characters\n");
+			}
 		}
 	}
 }

@@ -17,9 +17,10 @@ int countKey;
 
 void error(const char *msg)
 {
-	perror(msg);
+	// perror(msg);
+	fprintf(stderr, "%s\n",msg);
 	exit(1);
-} // Error function used for reporting issues
+} 
 
 void receiveData(int socketFD, char *string, int flag);
 void sendData(int socketFD, char *string);
@@ -76,8 +77,8 @@ int main(int argc, char *argv[])
 	if (socketFD < 0)
 		error("CLIENT: ERROR opening socket");
 
-	if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
-		error("setsockopt(SO_REUSEADDR) failed");
+	// if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
+	// 	error("setsockopt(SO_REUSEADDR) failed");
 
 	// Connect to server
 	if (connect(socketFD, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0) // Connect socket to address
@@ -89,7 +90,10 @@ int main(int argc, char *argv[])
 
 	// printf("CLIENT: receiving handshake now...\n");
 	if (receiveHandshake(socketFD) < 0)
-		error("DEC CLIENT: ERROR handshake failed");
+	{
+		printf("DEC CLIENT: ERROR handshake failed");
+		exit(2);
+	}
 
 	// printf("sending file string now...\n");
 	sendData(socketFD, filestring);
