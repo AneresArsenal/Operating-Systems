@@ -19,6 +19,7 @@ ${echo}
 otp_dec_d $decPort &
 otp_dec ciphertext1 mykey $decPort > finaltext1
 ${echo}
+${echo}
 ${echo} '----------------------RESULTS-----------------------------'
 ${echo}
 ${echo} 'plaintext1 contains'
@@ -26,6 +27,10 @@ cat -A plaintext1
 ${echo} 'finaltext1 contains'
 cat -A finaltext1
 ${echo}
+${echo} 'compare plain and final text'
+cmp plaintext1 finaltext1
+${echo} 
+${echo} 'compare word count'
 wc < plaintext1
 wc < finaltext1
 ${echo}
@@ -49,6 +54,10 @@ cat -A plaintext2
 ${echo} 'finaltext2 contains'
 cat -A finaltext2
 ${echo}
+${echo} 'compare plain and final text'
+cmp plaintext2 finaltext2
+${echo} 
+${echo} 'compare word count'
 wc < plaintext2
 wc < finaltext2
 ${echo}
@@ -72,6 +81,10 @@ cat -A plaintext3
 ${echo} 'finaltext3 contains'
 cat -A finaltext3
 ${echo}
+${echo} 'compare plain and final text'
+cmp plaintext3 finaltext3
+${echo} 
+${echo} 'compare word count'
 wc < plaintext3
 wc < finaltext3
 ${echo}
@@ -95,6 +108,10 @@ cat -A plaintext4
 ${echo} 'finaltext4 contains'
 cat -A finaltext4
 ${echo}
+${echo} 'compare plain and final text'
+cmp plaintext4 finaltext4
+${echo} 
+${echo} 'compare word count'
 wc < plaintext4
 wc < finaltext4
 ${echo}
@@ -117,6 +134,11 @@ cat -A plaintext5
 ${echo} 'finaltext5 contains'
 cat -A finaltext5
 ${echo}
+${echo}
+${echo} 'compare plain and final text'
+cmp plaintext5 finaltext5
+${echo} 
+${echo} 'compare word count'
 wc < plaintext5
 wc < finaltext5
 ${echo}
