@@ -12,9 +12,9 @@
 #define maxbuffer 63000
 int PIDCount = 0;
 
+// error text must be output to stderr
 void error(const char *msg)
 {
-	// perror(msg);
 	fprintf(stderr, "%s\n", msg);
 	exit(1);
 }
@@ -24,42 +24,36 @@ void sendSuccessMessage(int establishedConnectionFD);
 void sendData(int establishedConnectionFD, char *encryptedFile);
 void decryptFile(char *file, char *key, char *encrypted);
 int receiveHandshake(int establishedConnectionFD);
-void forkNewProcess(socklen_t sizeOfClientInfo, int establishedConnectionFD, int listenSocketFD, struct sockaddr_in clientAddress);
+void forkNewProcess(socklen_t sizeOfClientInfo, int establishedConnectionFD, int listenSocketFD, struct sockaddr_in clientAddress, int portNumber);
 int updatePIDCount(int flag);
 
 void catchSIGCHILD(int signo)
 {
 
 	int exitStatus;
-
 	int pid = waitpid(-1, &exitStatus, WNOHANG);
+	// a child process terminated, update tally
 	if (pid > 0)
 	{
-		// write(STDOUT_FILENO, "DEC SERVER: Child process terminated!\n", 38);
 		updatePIDCount(-1);
 	}
 
+	// child process exited with exit status
 	if (WIFEXITED(exitStatus))
 	{
 		int exitStat = WEXITSTATUS(exitStatus);
-
-		// printf("ENC SERVER: Process exited with exit status %d\n", exitStat);
-		fflush(stdout);
-		exit(exitStat);
 	}
 
 	// child process has terminated with a signal
 	else if (WIFSIGNALED(exitStatus))
 	{
 		int termSignal = WTERMSIG(exitStatus);
-
-		// printf("ENC SERVER: Process was terminated by signal %i\n", termSignal);
-		fflush(stdout);
 	}
 }
 
 int main(int argc, char *argv[])
 {
+	// signal handler to catch sigchld
 	signal(SIGCHLD, catchSIGCHILD);
 
 	int listenSocketFD, establishedConnectionFD, portNumber, charsRead, charsWritten;
@@ -84,87 +78,95 @@ int main(int argc, char *argv[])
 	// Create the socket
 	listenSocketFD = socket(AF_INET, SOCK_STREAM, 0);
 	if (listenSocketFD < 0)
-		error("ERROR opening socket");
+		error("DEC SERVER: ERROR opening socket");
 
+	// allow socket reuse
 	if (setsockopt(listenSocketFD, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
-		error("setsockopt(SO_REUSEADDR) failed");
+		error("DEC SERVER: setsockopt(SO_REUSEADDR) failed");
 
 	// Enable the socket to begin listening
 	// Connect socket to port
 	if (bind(listenSocketFD, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0)
 	{
-		// perror("Hull breach: bind()");
-		// exit(1);
 		error("DEC SERVER: ERROR on binding");
 	}
 
 	listen(listenSocketFD, 5); // Flip the socket on - it can now receive up to 5 connections
 
-	// Accept a connection, blocking if one is not available until one connects
+	// Get the size of the address for the client that will connect
 	sizeOfClientInfo = sizeof(clientAddress);
 	pid_t spawnPid = -1;
 	int childExitMethod = -1;
 
+	// keep server open in while loop
 	while (1)
 	{
 
 		establishedConnectionFD = accept(listenSocketFD, (struct sockaddr *)&clientAddress, &sizeOfClientInfo); // Accept
 		if (establishedConnectionFD < 0)
 		{
-			error("ERROR on accept");
+			error("DEC SERVER: ERROR on accept");
 		}
+
+		// no request sent to socket, skip the rest of the loop
 		else if (establishedConnectionFD == 0)
 		{
 			close(establishedConnectionFD);
 			continue;
 		}
+
+		// accept succeeded
 		else
 		{
+			// check count
 			updatePIDCount(0);
+
+			// maxed out at 5, skip the rest of the loop
 			if (PIDCount == 5)
 			{
-				// printf("DEC SERVER: Kinda busy right now...\n");
 				continue;
 			}
+
 			else
 			{
+				// update count
+				updatePIDCount(1);
 				spawnPid = fork();
+
 				switch (spawnPid)
 				{
 
 				// fork is unsuccsessful
 				case -1:
 				{
-					perror("Hull Breach!\n");
-					exit(1);
+					error("DEC SERVER: Fork unsuccessful");
 					break;
 				}
 
 				// fork is successful, child is running
 				case 0:
 				{
-					// printf("ENC SERVER:Daemon child created!\n");
-					updatePIDCount(1);
-					forkNewProcess(sizeOfClientInfo, establishedConnectionFD, listenSocketFD, clientAddress);
+					forkNewProcess(sizeOfClientInfo, establishedConnectionFD, listenSocketFD, clientAddress, portNumber);
 					break;
 				}
 
 				// handle child case
 				default:
 				{
-					// close(establishedConnectionFD); // Close the existing socket which is connected to the client
+					// block while loop until one of the child processes exit since count has maxed out
 					if (PIDCount == 5)
 					{
 						// printf("ENC SERVER: Kinda busy right now...\n");
 						waitpid(-1, &childExitMethod, 0);
 					}
+
+					// create child process to run without blocking
 					else
 					{
 						waitpid(spawnPid, &childExitMethod, WNOHANG);
 					}
-					// close(establishedConnectionFD); // Close the existing socket which is connected to the client
-					// waitpid(spawnPid, &childExitMethod, WNOHANG);
-					// close(establishedConnectionFD);
+
+					close(establishedConnectionFD);
 				}
 				}
 			}
@@ -172,31 +174,23 @@ int main(int argc, char *argv[])
 		close(establishedConnectionFD);
 	}
 
-	printf("Closing listening socket :( \n");
-
-	// forkNewProcess(sizeOfClientInfo, establishedConnectionFD, listenSocketFD, clientAddress);
-
 	close(listenSocketFD); // Close the listening socket
 
 	return 0;
 }
-void forkNewProcess(socklen_t sizeOfClientInfo, int establishedConnectionFD, int listenSocketFD, struct sockaddr_in clientAddress)
+
+void forkNewProcess(socklen_t sizeOfClientInfo, int establishedConnectionFD, int listenSocketFD, struct sockaddr_in clientAddress, int portNumber)
 {
 
 	// perform handshake with client
 	if (receiveHandshake(establishedConnectionFD) < 0)
 	{
-		printf("ENC SERVER: ERROR handshake failed\n");
+		fprintf(stderr, "DEC SERVER: ERROR handshake failed at port %i\n", portNumber);
 		sendData(establishedConnectionFD, "handshake failed\n");
 		exit(2);
 	}
 
 	sendData(establishedConnectionFD, "This is otp-dec-d\n");
-
-	// printf("SERVER: Both handshakes successful\n");
-
-	/* Fork to create a process for this client and perform a test to see
-whether we're the parent or the child. */
 
 	// printf("SERVER: Connected client at port %d\n", ntohs(clientAddress.sin_port));
 
@@ -212,17 +206,11 @@ whether we're the parent or the child. */
 	// Send a Success message back to the client
 	sendSuccessMessage(establishedConnectionFD);
 
-	// printf("\nSERVER: Server shutting down...\n\n");
-
 	char dummy[maxchars];
 	receiveData(establishedConnectionFD, dummy);
 
-	// printf("File string is %s\n", filestring);
-	// printf("Key string is %s\n", keystring);
-
 	char encrypted[maxchars];
 	decryptFile(filestring, keystring, encrypted);
-	// printf("Encrypted file is %s", encrypted);
 
 	sendData(establishedConnectionFD, encrypted);
 
@@ -238,38 +226,41 @@ void receiveData(int establishedConnectionFD, char *string)
 	int bufferLen = 0;
 	int i = 0;
 
-	// Read the client's message from the socket
+	// loop through until null terminator detected which breaks the while loop
 	while (1)
 	{
-		charsReceived = recv(establishedConnectionFD, buffer, sizeof(maxbuffer) - 1, 0);
+		charsReceived = recv(establishedConnectionFD, buffer, sizeof(buffer) - 1, 0);
 
 		if (charsReceived < 0)
 		{
-			error("SERVER: ERROR reading from socket");
+			error("DEC SERVER: ERROR reading from socket");
 		}
-		// printf("current package is %s\n", buffer);
 
+		// first read, copy buffer to string
 		if (i == 0)
 		{
-			strcpy(string, buffer);
+			sprintf(string, "%s", buffer);
 		}
 
+		// subsequent read, concatenate string
 		else
 		{
 			strcat(string, buffer);
 		}
 
+		// get buffer length for null terminator check
 		bufferLen = strlen(buffer);
+
+		// break loop when null terminator found
 		if ((buffer[bufferLen - 1]) == '\n')
 		{
-			// printf("Receiving finish!\n");
 			break;
 		}
+
+		// reset buffer after each read
 		memset(buffer, '\0', maxbuffer);
 		i++;
 	}
-	// printf("SERVER: I received this from the client: %s", buffer);
-	// printf("SERVER: String saved as: %s", string);
 }
 
 int receiveHandshake(int establishedConnectionFD)
@@ -283,7 +274,7 @@ int receiveHandshake(int establishedConnectionFD)
 	int i = 0;
 
 	// Read the client's message from the socket
-
+	// Same logic as receive data above
 	while (1)
 	{
 
@@ -307,41 +298,21 @@ int receiveHandshake(int establishedConnectionFD)
 		bufferLen = strlen(buffer);
 		if ((buffer[bufferLen - 1]) == '\n')
 		{
-			// printf("Receiving finish!\n");
 			break;
 		}
 		memset(buffer, '\0', maxbuffer);
 		i++;
 	}
-	// printf("SERVER: Handshake received is %s\n", buffer);
 
+	// string compare to make sure it matches expected dec client key
 	if (strcmp(string, "This is otp-dec\n") != 0)
 	{
+		// failed, return -1
 		return -1;
 	}
 
 	return 0;
 }
-
-// void receiveData(int establishedConnectionFD, char *string)
-// {
-// 	int charsReceived;
-// 	char buffer[maxchars];
-// 	memset(buffer, '\0', maxchars);
-// 	memset(string, '\0', maxchars);
-
-// 	// Read the client's message from the socket
-// 	charsReceived = recv(establishedConnectionFD, buffer, sizeof(buffer) - 1, 0);
-
-// 	if (charsReceived < 0)
-// 	{
-// 		error("ERROR reading from socket");
-// 	}
-// 	// printf("%s", buffer);
-// 	sprintf(string, "%s", buffer);
-// 	printf("SERVER: I received this from the client: %s", buffer);
-// 	// printf("SERVER: String saved as: %s", string);
-// }
 
 void sendSuccessMessage(int establishedConnectionFD)
 {
@@ -350,13 +321,11 @@ void sendSuccessMessage(int establishedConnectionFD)
 	int charsWritten;
 
 	// Send a Success message back to the client
-	sprintf(buffer, "Success! I am the server, and I got your message\n");
+	sprintf(buffer, "Success! I am the dec server, and I got your message\n");
 
 	charsWritten = send(establishedConnectionFD, buffer, strlen(buffer), 0); // Send success back
 	if (charsWritten < 0)
-		error("ERROR writing to socket");
-
-	// printf("\nSERVER: Waiting for next data package....\n\n");
+		error("DEC SERVER: ERROR writing to socket");
 }
 
 void sendData(int establishedConnectionFD, char *encryptedFile)
@@ -365,14 +334,12 @@ void sendData(int establishedConnectionFD, char *encryptedFile)
 
 	charsWritten = send(establishedConnectionFD, encryptedFile, strlen(encryptedFile), 0); // Send success back
 	if (charsWritten < 0)
-		error("ERROR writing to socket");
-
-	// printf("\nSERVER: Waiting for next data package....\n\n");
+		error("DEC SERVER: ERROR writing to socket");
 }
 
 void decryptFile(char *file, char *key, char *encrypted)
 {
-
+	// perform decryption process
 	int fileLength = strlen(file) - 1;
 	int i;
 	int total;
@@ -382,38 +349,49 @@ void decryptFile(char *file, char *key, char *encrypted)
 	char currentChar;
 	memset(encrypted, '\0', maxchars);
 
+	// loop till file string length
 	for (i = 0; i < fileLength; i++)
 	{
-
+		// if file char is not a space, minus 64
 		if (file[i] != 32)
 		{
 			fileChar = file[i] - 64;
 		}
+
+		// else assign to 0
 		else
 		{
 			fileChar = 0;
 		}
 
+		// if key char is not a space, minus 64
 		if (key[i] != 32)
 		{
 			keyChar = key[i] - 64;
 		}
+
+		// else assign to 0
 		else
 		{
 			keyChar = 0;
 		}
 
+		// minus file and key numbers
 		total = fileChar - keyChar;
 
+		// correct any total less than 0
 		if (total < 0)
 		{
 			total = total + 26;
 		}
+
+		// get the remainder after modulus 26
 		result = total % 26;
 
+		// revert to capital letters
 		result = result + 64;
 
-		// strncat(temp, &currentChar, sizeof(currentChar));
+		// 64 is space, change to 32
 		if (result == 64)
 		{
 			currentChar = 32;
@@ -423,6 +401,7 @@ void decryptFile(char *file, char *key, char *encrypted)
 			currentChar = result;
 		}
 
+		// bad input detected
 		else
 		{
 			error("DEC SERVER: Bad input\n");
@@ -437,9 +416,6 @@ void decryptFile(char *file, char *key, char *encrypted)
 	}
 
 	encrypted[i] = '\n';
-
-	// to see all thevalue in temp array.
-	// printf("Final encrpyted string is: [%s]\n", encrypted);
 }
 
 int updatePIDCount(int flag)
@@ -474,6 +450,10 @@ int updatePIDCount(int flag)
 
 	return 0;
 }
-// reference
-// https://stackoverflow.com/questions/13669474/multiclient-server-using-fork
+
+// references
 // https://stackoverflow.com/questions/16007789/keep-socket-open-in-c
+// http://man7.org/linux/man-pages/man2/accept.2.html
+// https://linux.die.net/man/2/waitpid
+// https://beej.us/guide/bgnet/html/#setsockoptman
+// server and client files provided on canvas

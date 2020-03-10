@@ -1,7 +1,8 @@
 
 /****************************************** KeyGen ***************************************/
-// This program creates a key file of specified length. The characters in the file generated will be any of the 27 allowed characters, generated using the standard UNIX randomization methods.
-// Do not create spaces every five characters, as has been historically done. Note that you specifically do not have to do any fancy random number generation: we’re not looking for cryptographically secure random number generation! rand() is just fine.
+// Program requirements:
+// This program creates a key file of specified length. The characters in the file generated 
+// will be any of the 27 allowed characters, generated using the standard UNIX randomization methods.
 // The last character keygen outputs should be a newline. All error text must be output to stderr, if any.
 
 #include <unistd.h>
@@ -31,7 +32,6 @@ void error(const char *msg)
 int main(int argc, char *argv[])
 {
 	int i, flag;
-	// struct keyMap map;
 	srand(time(NULL));
 
 	int length = atoi(argv[1]);
@@ -41,21 +41,27 @@ int main(int argc, char *argv[])
 
 	char alpha;
 
+	// reset char arrays
 	memset(string, '\0', maxchars);
 	memset(string2, '\0', maxchars);
 
-	// printf("\n Key length is %d\n", length);
+	// if specified length is over 63999, split generation into two strings
+
 	if (length >= 63999)
 	{
 		for (i = 0; i < length; i++)
 		{
+
+			// flag used to randomly place space
 			flag = rand() % (10);
-			// printf("Flag is %i\n", flag);
+		
+			// if flag is below 9, generate alphabet
 			if (flag <= 8)
 			{
 				alpha = rand() % (26) + 65;
 			}
 
+			// else place a space
 			else
 			{
 				alpha = 32;
@@ -77,13 +83,16 @@ int main(int argc, char *argv[])
 		string2[length-63999] = '\n';
 		printf("%s%s", string, string2);
 	}
+
+
+	// same randomization as above, just with one string as length is below 63999
 	else
 	{
 		for (i = 0; i < length; i++)
 		{
 
 			flag = rand() % (10);
-			// printf("Flag is %i\n", flag);
+			
 			if (flag <= 8)
 			{
 				alpha = rand() % (26) + 65;
@@ -94,8 +103,6 @@ int main(int argc, char *argv[])
 				alpha = 32;
 			}
 			string[i] = alpha;
-			// printf("Char added %c\n", alpha);
-			// printf("Key %i: char %c code is %i\n", i, alpha, alpha);
 		}
 	
 
