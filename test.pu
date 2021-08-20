@@ -1,0 +1,36 @@
+Ip: [[2, 4, 7, 3, 11], 9]
+ls = [2,4,7,3,11]
+target = 9
+
+searchCombo (ls, target):
+    for i in range(len(ls)):
+      val = target - ls[i]
+      if val is in ls:
+          index = ls.index(val)
+          return(i, index)
+      else:
+          continue
+
+    return -1
+
+# let target be = -100
+# expected returned val is -1
+
+ls = [2,4,7,3,11]
+target = 100
+assert (searchCombo(ls, target) == -1)
+
+ls = []
+ls = {}
+ls = [1 , a , 2, b]
+ls = ["1", "2", "3"]
+
+
+removes duplicate chars in a string
+
+# a list of chars 
+
+str = "apple"
+array = ['a', 'p', 'p', 'l','e']  O(n)
+set = ('a', 'p', 'l', e) O(n)
+O(n)
